@@ -1785,30 +1785,28 @@ function abrirConfigAS() {
 
 // ── START ────────────────────────────────────────────────────
 async function iniciarApp() {
-  // Tenta carregar pedidos do Drive primeiro
+  // Mostra pedidos embutidos IMEDIATAMENTE
+  renderListaPedidos(pedidos);
+
+  // Tenta atualizar do Drive em background (sem travar a tela)
   const urlAS = getAsUrl();
-  if (urlAS) {
-    document.getElementById('sub-pedidos').textContent = '🔄 Carregando do Drive...';
-    const pedidosDrive = await carregarPedidosDoDrive();
-    if (pedidosDrive) {
+  if (!urlAS) return;
+
+  try {
+    // Timeout de 5 segundos para não ficar esperando
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
+    const pedidosDrive = await Promise.race([carregarPedidosDoDrive(), timeout]);
+    if (pedidosDrive && pedidosDrive.length > 0) {
       pedidos = pedidosDrive;
-      // Restaura status do localStorage
       const st = JSON.parse(localStorage.getItem('eg_pedidos_status') || '{}');
       pedidos.forEach(p => { if (p.status === 'entregue') st[p.num + '|' + p.loja] = 'entregue'; });
       statusPedidos = st;
       renderListaPedidos(pedidos);
-      toast(`✅ ${pedidos.length} pedido(s) carregado(s) do Drive`, 'vd');
-      return;
+      toast(`☁️ ${pedidos.length} pedido(s) atualizados do Drive`, 'vd');
     }
-  }
-  // Fallback: pedidos do código / localStorage
-  renderListaPedidos(pedidos);
-
-  // Mostra botão de configuração se ainda não configurou
-  if (!urlAS) {
-    setTimeout(() => {
-      toast('⚙️ Configure o Apps Script para salvar no Drive', '');
-    }, 1500);
+  } catch(e) {
+    // Drive não respondeu — pedidos embutidos já estão na tela, tudo certo
+    console.log('Drive indisponível, usando pedidos embutidos');
   }
 }
 
