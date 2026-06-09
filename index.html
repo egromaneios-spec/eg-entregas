@@ -425,6 +425,13 @@ tfoot td.val { color:var(--or); font-size:1rem; }
       <div><div class="card-title">Assinatura Digital</div><div class="card-sub">Assine com o dedo — ou use a foto acima</div></div>
     </div>
     <div class="card-body">
+      <!-- Termo de recebimento — só para clientes Cirvaiha -->
+      <div id="bloco-termo-cirvaiha" style="display:none;background:var(--ci);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:14px;font-size:0.75rem;color:var(--tx);line-height:1.6">
+        <div style="font-weight:700;font-size:0.8rem;text-align:center;letter-spacing:1px;margin-bottom:8px;color:var(--az)">TERMO DE RECEBIMENTO</div>
+        <p style="margin:0">Declaro para os fins que se fizerem necessários que recebi os produtos abaixo relacionados de acordo com os padrões estabelecidos em negociação.</p>
+        <p style="margin:8px 0 0;font-weight:600">CIRVAIHA GESTÃO DE SERVIÇOS E DESENVOLVIMENTO DE PESSOAS LTDA — CNPJ 15.040.354/0001-37</p>
+        <p style="margin:4px 0 0">Neste ato devidamente representada na forma de seu estatuto social doravante denominada cliente.</p>
+      </div>
       <div class="assin-wrap">
         <canvas class="canvas-assin" id="canvas-assin"></canvas>
       </div>
@@ -758,10 +765,10 @@ function selecionarPedido(num) {
 
   // Mostra e-mails fixos da Cirvaiha só se for pedido dela
   const blocoCirc = document.getElementById('bloco-emails-cirvaiha');
-  if (blocoCirc) {
-    const ehCirv = (pedidoAtual.comprador || '').toUpperCase().includes('CIRVAIHA');
-    blocoCirc.style.display = ehCirv ? '' : 'none';
-  }
+  const blocoTermo = document.getElementById('bloco-termo-cirvaiha');
+  const ehCirv = (pedidoAtual.comprador || '').toUpperCase().includes('CIRVAIHA');
+  if (blocoCirc)  blocoCirc.style.display  = ehCirv ? '' : 'none';
+  if (blocoTermo) blocoTermo.style.display = ehCirv ? '' : 'none';
 
   // Carrega e-mail salvo para esta loja
   const emailsLojas = JSON.parse(localStorage.getItem('eg_emails_lojas') || '{}');
@@ -1176,6 +1183,13 @@ ${entregaComp ? `
 </div>` : ''}
 
 <div class="assin-section">
+  ${(p.comprador||'').toUpperCase().includes('CIRVAIHA') ? `
+  <div style="background:#f0f7f4;border:1px solid #b7dfcc;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:#1a3a2a;line-height:1.7">
+    <div style="font-weight:800;text-align:center;letter-spacing:1.5px;font-size:12px;margin-bottom:8px;color:#1B3A5C">TERMO DE RECEBIMENTO</div>
+    <p style="margin:0">Declaro para os fins que se fizerem necessários que recebi os produtos abaixo relacionados de acordo com os padrões estabelecidos em negociação.</p>
+    <p style="margin:8px 0 0;font-weight:700">CIRVAIHA GESTÃO DE SERVIÇOS E DESENVOLVIMENTO DE PESSOAS LTDA — CNPJ 15.040.354/0001-37</p>
+    <p style="margin:4px 0 0">Neste ato devidamente representada na forma de seu estatuto social doravante denominada cliente.</p>
+  </div>` : ''}
   <table style="width:100%;border:none">
     <tr>
       <td style="width:50%;padding-right:20px;vertical-align:top">
