@@ -952,137 +952,125 @@ async function finalizarEntrega() {
 
   if (!recebedor) { toast('⚠️ Informe o nome de quem recebeu', 'vm'); return; }
   if (!entregador) { toast('⚠️ Selecione o entregador', 'vm'); return; }
-  // Assinatura OU foto física são aceitas
   if (!temAssinatura && !fotoRomaneiofisicoBase64) {
-    toast('⚠️ Colete a assinatura digital ou anexe foto do romaneio assinado', 'vm'); return;
+    toast('⚠️ Colete a assinatura digital ou foto do romaneio', 'vm'); return;
   }
-  if (!emailEG) { toast('⚠️ Informe o e-mail de destino', 'vm'); return; }
-  const faltas = coletarFaltas();
 
-  // Salva e-mail adicional do cliente por loja
-  const emailExtra = document.getElementById('email-cliente-extra').value.trim();
+  const btn = document.getElementById('btn-finalizar');
+  btn.textContent = '⏳ Finalizando...';
+  btn.disabled = true;
+
+  // Captura dados
+  const canvas = document.getElementById('canvas-assin');
+  const assinaturaBase64 = temAssinatura ? canvas.toDataURL('image/png') : null;
+  const cargo      = document.getElementById('cargo').value;
+  const hora       = document.getElementById('hora-entrega').value;
+  const obsEntrega = document.getElementById('obs-entrega').value;
+  const emailExtra = document.getElementById('email-cliente-extra')?.value?.trim() || '';
+  const faltas     = coletarFaltas();
+
+  // Salva e-mail do cliente por loja
   if (emailExtra && pedidoAtual) {
     const emailsLojas = JSON.parse(localStorage.getItem('eg_emails_lojas') || '{}');
     emailsLojas[pedidoAtual.loja] = emailExtra;
     localStorage.setItem('eg_emails_lojas', JSON.stringify(emailsLojas));
   }
 
-  const btn = document.getElementById('btn-finalizar');
-  btn.textContent = '⏳ Gerando comprovante...';
-  btn.disabled = true;
-
-  // Captura assinatura em base64
-  const canvas = document.getElementById('canvas-assin');
-  const assinaturaBase64 = canvas.toDataURL('image/png');
-
-  const cargo      = document.getElementById('cargo').value;
-  const hora       = document.getElementById('hora-entrega').value;
-  const obsEntrega = document.getElementById('obs-entrega').value;
-
-  // Monta lista de destinatários
-  const emailsFixosCirv = ['suprimentos1cirvaiha@gmail.com','faturamentocirvaiha@gmail.com','barbara@cirvaiha.com'];
-  const emailExtra2 = document.getElementById('email-cliente-extra').value.trim();
-  const todosDestinatarios = [...emailsFixosCirv];
-  if (emailExtra2) todosDestinatarios.push(emailExtra2);
-
-  // Monta HTML do comprovante
-  const compElem = document.getElementById('comp-itens');
-  const compRec  = document.getElementById('comp-recebedor');
-  const entregaComp = compElem ? compElem.value : '';
-  const recebedorComp = compRec ? compRec.value : '';
-  const htmlComp = gerarHTMLComprovante(pedidoAtual, recebedor, cargo, entregador, hora, obsEntrega, assinaturaBase64, faltas, fotoRomaneiofisicoBase64, entregaComp, recebedorComp);
+  // Gera comprovante HTML
+  const htmlComp = gerarHTMLComprovante(pedidoAtual, recebedor, cargo, entregador, hora, obsEntrega, assinaturaBase64, faltas, fotoRomaneiofisicoBase64);
 
   // Salva status localmente
+  statusPedidos[pedidoAtual.num + '|' + pedidoAtual.loja] = 'entregue';
   statusPedidos[pedidoAtual.num] = 'entregue';
   localStorage.setItem('eg_pedidos_status', JSON.stringify(statusPedidos));
 
-  // Salva no histórico local (com assinatura) por 90 dias
+  // Salva no histórico local
   salvarNoHistorico(pedidoAtual, recebedor, cargo, entregador, hora, obsEntrega, assinaturaBase64, fotoRomaneiofisicoBase64, faltas, htmlComp);
 
-  // Salva status e histórico no Drive se configurado
-  if (getAsUrl()) {
-    salvarStatusNoDrive(pedidoAtual.num, pedidoAtual.loja, 'entregue');
-    salvarHistoricoNoDrive({
-      id: Date.now(), timestamp: Date.now(),
-      dataEntrega: new Date().toLocaleDateString('pt-BR'),
-      num: pedidoAtual.num, loja: pedidoAtual.loja,
-      cidade: pedidoAtual.cidade, uf: pedidoAtual.uf,
-      entregador, recebedor, cargo, hora,
-      obs: obsEntrega, total: pedidoAtual.total,
-      qtdItens: pedidoAtual.itens.length,
-      faltas: faltas ? faltas.length : 0
-    });
-  }
+  // Guarda para compartilhamento
+  window._ultimoComprovante = {
+    html: htmlComp, htmlComp,
+    nome: `Romaneio_${pedidoAtual.num}_${pedidoAtual.loja.replace(/\s+/g,'_')}.html`,
+    loja: pedidoAtual.loja, num: pedidoAtual.num,
+    comprador: pedidoAtual.comprador || '',
+    recebedor, cargo, entregador, hora, obs: obsEntrega,
+    emailExtra, emailEG
+  };
 
-  // Tenta enviar via Apps Script
-  const appsScriptUrl = localStorage.getItem('eg_apps_script_url') || '';
-
-  if (appsScriptUrl) {
-    try {
-      await fetch(appsScriptUrl + '?action=romaneio', {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'romaneio',
-          emailEG, destinatarios: todosDestinatarios,
-          pedidoNum: pedidoAtual.num,
-          loja: pedidoAtual.loja,
-          recebedor, cargo, entregador, hora, obsEntrega,
-          htmlComprovante: htmlComp
-        })
-      });
-    } catch(e) {}
-  }
-
-  // Download local do comprovante
-  const nomeArquivo = `Romaneio_${pedidoAtual.num}_${pedidoAtual.loja.replace(/\s+/g,'_')}.html`;
-  const blob = new Blob([htmlComp], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = nomeArquivo;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  // Salva para compartilhamento
-  window._ultimoComprovante = { html: htmlComp, htmlComp, nome: nomeArquivo, loja: pedidoAtual.loja, num: pedidoAtual.num, comprador: pedidoAtual.comprador || '', destinatarios: todosDestinatarios, emailEG };
-
-  // Mostra sucesso
+  // Vai para tela de sucesso IMEDIATAMENTE
   document.getElementById('msg-sucesso').textContent =
-    `Comprovante gerado! Pedido #${pedidoAtual.num} — ${pedidoAtual.loja}`;
+    `Entregue! Pedido #${pedidoAtual.num} — ${pedidoAtual.loja}`;
   document.getElementById('resumo-entrega').innerHTML = `
     <strong>Pedido:</strong> #${pedidoAtual.num}<br>
     <strong>Loja:</strong> ${pedidoAtual.loja}<br>
     <strong>Entregador:</strong> ${entregador}<br>
     <strong>Recebedor:</strong> ${recebedor}${cargo ? ' (' + cargo + ')' : ''}<br>
     <strong>Horário:</strong> ${hora}<br>
-
-    <strong>Itens:</strong> ${pedidoAtual.itens.length} produtos<br>
-    <span style="color:var(--vd)">✅ Comprovante baixado no celular</span>`;
+    <strong>Itens:</strong> ${pedidoAtual.itens.length} produto(s)`;
 
   mostrarTela('tela-sucesso');
 
-  // Se estiver no modo dia, mostra próxima loja pendente
+  // Próxima loja no modo dia
   const btnProxima = document.getElementById('btn-proxima-entrega');
   const hintProxima = document.getElementById('hint-proxima-loja');
   if (modoDia && pedidosDoDia.size > 0) {
     const pendentes = [...pedidosDoDia]
       .map(num => pedidos.find(p => p.num === num))
-      .filter(p => p && statusPedidos[p.num] !== 'entregue');
+      .filter(p => p && !statusPedidos[p.num + '|' + p.loja] && statusPedidos[p.num] !== 'entregue');
     if (pendentes.length > 0) {
       const prox = pendentes[0];
       if (btnProxima) btnProxima.textContent = `📦 Ir para ${prox.loja}`;
-      if (hintProxima) { hintProxima.textContent = `${pendentes.length} loja(s) pendente(s) no dia`; hintProxima.style.display = ''; }
+      if (hintProxima) { hintProxima.textContent = `${pendentes.length} loja(s) pendente(s)`; hintProxima.style.display = ''; }
     } else {
-      if (btnProxima) btnProxima.textContent = '🎉 Ver lista do dia';
-      if (hintProxima) { hintProxima.textContent = 'Todas as lojas do dia foram entregues!'; hintProxima.style.display = ''; }
+      if (btnProxima) btnProxima.textContent = '🎉 Todas entregues!';
+      if (hintProxima) { hintProxima.textContent = 'Dia de entregas concluído!'; hintProxima.style.display = ''; }
     }
   } else {
     if (btnProxima) btnProxima.textContent = '📦 Próxima Entrega';
     if (hintProxima) hintProxima.style.display = 'none';
   }
+
+  // Envia e-mail e salva no Drive em BACKGROUND (não trava a tela)
+  setTimeout(() => enviarESalvarBackground(pedidoAtual, htmlComp, recebedor, cargo, entregador, hora, obsEntrega, emailExtra, emailEG), 300);
 }
+
+async function enviarESalvarBackground(pedido, htmlComp, recebedor, cargo, entregador, hora, obs, emailExtra, emailEG) {
+  if (!getAsUrl()) return;
+
+  // Salva status no Drive
+  salvarStatusNoDrive(pedido.num, pedido.loja, 'entregue');
+
+  // Salva histórico no Drive
+  salvarHistoricoNoDrive({
+    id: Date.now(), timestamp: Date.now(),
+    dataEntrega: new Date().toLocaleDateString('pt-BR'),
+    num: pedido.num, loja: pedido.loja,
+    cidade: pedido.cidade, uf: pedido.uf,
+    entregador, recebedor, cargo, hora,
+    obs, total: pedido.total,
+    qtdItens: pedido.itens.length,
+    faltas: 0
+  });
+
+  // Envia e-mail com comprovante no corpo
+  try {
+    const res = await chamarASComAnexo('enviarEmail', {
+      num: pedido.num,
+      loja: pedido.loja,
+      comprador: pedido.comprador || '',
+      emailClienteExtra: emailExtra || '',
+      emailEG: emailEG || 'eg.romaneios@gmail.com',
+      htmlComp
+    });
+    if (res && res.ok) {
+      toast(`📧 E-mail enviado para ${res.enviados} destinatário(s)`, 'vd');
+    }
+  } catch(e) {
+    console.warn('Erro ao enviar e-mail:', e);
+  }
+}
+
+
 
 // ── GERA HTML DO COMPROVANTE ─────────────────────────────
 function gerarHTMLComprovante(p, recebedor, cargo, entregador, hora, obs, assinaturaBase64, faltas, fotoFisica, entregaComp, recebedorComp) {
@@ -1289,6 +1277,14 @@ function importarCSV(input) {
         }
       }
       pedidos = Object.values(novos);
+      // Limpa seleção do dia ao importar novo CSV
+      pedidosDoDia.clear();
+      modoDia = false;
+      const btnModo = document.getElementById('btn-modo-dia');
+      if (btnModo) { btnModo.style.background='var(--azc)'; btnModo.style.color='var(--az)'; btnModo.textContent='☑️ Montar dia'; }
+      document.getElementById('barra-dia')?.classList.remove('visivel');
+      statusPedidos = {};
+      localStorage.removeItem('eg_pedidos_status');
       renderListaPedidos(pedidos);
       toast(`✅ ${pedidos.length} pedido(s) importado(s)!`, 'vd');
       // Salva no Drive se configurado
