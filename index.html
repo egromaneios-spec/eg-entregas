@@ -1731,6 +1731,28 @@ async function chamarAS(action, body = {}) {
   }
 }
 
+// Para payloads grandes (htmlComp) usa fetch com no-cors
+// O Apps Script recebe via postData e responde — mas browser bloqueia leitura
+// Solução: envia htmlComp separado via FormData para contornar limite de URL
+async function chamarASComAnexo(action, body) {
+  const url = getAsUrl();
+  if (!url) return null;
+  try {
+    // Envia como POST com content-type text/plain para contornar CORS preflight
+    const payload = JSON.stringify({ action, ...body });
+    const resp = await fetch(`${url}?action=${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: payload
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch(e) {
+    console.warn('AS post error:', e.message);
+    return null;
+  }
+}
+
 async function salvarPedidosNoDrive(lista) {
   return chamarAS('salvarPedidos', { pedidos: lista });
 }
@@ -1754,8 +1776,7 @@ async function salvarHistoricoNoDrive(reg) {
 }
 
 async function enviarEmailViaDrive(pedido, htmlComp, emailClienteExtra) {
-  // Envia o comprovante como anexo via Apps Script (que tem acesso ao Gmail)
-  return chamarAS('enviarEmail', {
+  return chamarASComAnexo('enviarEmail', {
     num: pedido.num,
     loja: pedido.loja,
     comprador: pedido.comprador || '',
