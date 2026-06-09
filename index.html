@@ -1,195 +1,1825 @@
-// ============================================================
-// EG SOLUÇÕES — Apps Script: Entregas Produtos de Limpeza
-// ============================================================
-// INSTRUÇÕES:
-// 1. Abra sua planilha → Extensões → Apps Script
-// 2. Cole este código (substitua tudo)
-// 3. Implantar → Nova implantação → App da Web
-//    - Executar como: Eu
-//    - Acesso: Qualquer pessoa
-// 4. Copie o link /exec e cole no ⚙️ do app
-// ============================================================
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>EG — Entregas Cirvaiha</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='18' width='36' height='26' rx='2' fill='%231B3A5C'/%3E%3Crect x='4' y='36' width='36' height='6' fill='%23E8903A'/%3E%3Ctext x='22' y='34' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-weight='900' font-size='16' fill='white'%3EEG%3C/text%3E%3Crect x='40' y='24' width='18' height='20' rx='2' fill='%231B3A5C'/%3E%3Cpath d='M41 24 Q42 18 46 17 L55 17 Q59 17 58 24Z' fill='%232A6099'/%3E%3Crect x='42' y='18' width='14' height='10' rx='1' fill='%23A8D4F0' opacity='.85'/%3E%3Crect x='40' y='36' width='18' height='6' fill='%23E8903A'/%3E%3Ccircle cx='16' cy='46' r='6' fill='%231A1A2E'/%3E%3Ccircle cx='16' cy='46' r='3' fill='%23E8903A'/%3E%3Ccircle cx='30' cy='46' r='6' fill='%231A1A2E'/%3E%3Ccircle cx='30' cy='46' r='3' fill='%23E8903A'/%3E%3Ccircle cx='50' cy='46' r='6' fill='%231A1A2E'/%3E%3Ccircle cx='50' cy='46' r='3' fill='%23E8903A'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --az:  #1B3A5C;
+  --az2: #2A6099;
+  --azc: #E3F0FA;
+  --or:  #E8903A;
+  --orc: #FDF0E3;
+  --vd:  #1A6B3A;
+  --vdc: #E6F5ED;
+  --vm:  #C0392B;
+  --vmc: #FDECEA;
+  --am:  #D4A017;
+  --amc: #FFFADF;
+  --ci:  #F4F6FA;
+  --bd:  #D0D7E2;
+  --tx:  #1A2535;
+  --lv:  #6B7A99;
+  --br:  #FFFFFF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Barlow', sans-serif; background: #0D1B2A; color: var(--tx); min-height: 100vh; }
 
-const SHEET_PEDIDOS = 'Entregas Produtos de Limpeza';
-const SHEET_HIST    = 'Histórico Comprovantes';
+/* HEADER */
+.hero { background: linear-gradient(135deg, #0D1B2A, #1B3A5C); padding: 20px 16px 0; }
+.hero::after { content:''; display:block; height:24px; background:var(--ci); border-radius:24px 24px 0 0; }
+.hero-inner { position:relative; z-index:1; }
+.logo-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.logo-box { background:var(--br); border-radius:8px; padding:4px 10px; }
+.logo-box b { font-size:18px; color:var(--az); font-family:'Barlow Condensed',sans-serif; font-weight:900; }
+.logo-box small { display:block; font-size:8px; color:var(--or); font-weight:700; letter-spacing:2px; margin-top:-2px; }
+.hero h1 { font-family:'Barlow Condensed',sans-serif; font-size:1.8rem; font-weight:900; color:white; line-height:1.1; margin-bottom:4px; }
+.hero p { font-size:0.8rem; color:rgba(255,255,255,0.5); margin-bottom:16px; }
 
-// Cabeçalhos
-const COLS_PED  = ['num','data','comprador','loja','endereco','numero','complemento',
-                   'cidade','uf','cep','bairro','obs','total','itens_json','status','atualizado_em'];
-const COLS_HIST = ['id','timestamp','dataEntrega','num','loja','cidade','uf',
-                   'entregador','recebedor','cargo','hora','obs','total','qtdItens','faltas','atualizado_em'];
+/* MAIN */
+.main { background:var(--ci); min-height:100vh; }
+.container { max-width:520px; margin:0 auto; padding:16px 14px 80px; }
 
-function getSheet(name, cols) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(name);
-  if (!sh) {
-    sh = ss.insertSheet(name);
-    sh.appendRow(cols);
-    sh.getRange(1,1,1,cols.length).setFontWeight('bold')
-      .setBackground('#1B3A5C').setFontColor('white');
-    sh.setFrozenRows(1);
+/* TELAS */
+.tela { display:none; }
+.tela.ativa { display:block; }
+
+/* CARDS */
+.card { background:var(--br); border-radius:14px; box-shadow:0 2px 12px rgba(27,58,92,0.08); margin-bottom:14px; overflow:hidden; }
+.card-head { padding:12px 16px; display:flex; align-items:center; gap:10px; }
+.card-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.card-title { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:1rem; }
+.card-sub { font-size:0.72rem; color:var(--lv); }
+.card-body { padding:0 16px 16px; }
+
+/* PEDIDO CARD */
+.pedido-item {
+  background:var(--br); border-radius:12px; padding:14px; margin-bottom:10px;
+  box-shadow:0 2px 8px rgba(27,58,92,0.07); border-left:4px solid var(--az);
+  cursor:pointer; transition:all 0.15s;
+}
+.pedido-item:active { transform:scale(0.98); }
+.pedido-item.selecionado { border-left-color:var(--or); background:var(--orc); }
+.pedido-item.no-dia { border-left-color:var(--vd); background:var(--vdc); }
+.pedido-item.no-dia .pedido-loja { color:var(--vd); }
+.check-dia { width:36px; height:36px; border-radius:8px; border:2px solid var(--bd); background:var(--br); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; flex-shrink:0; margin-left:8px; transition:all 0.15s; cursor:pointer; }
+.check-dia.marcado { background:var(--vd); border-color:var(--vd); color:white; }
+.barra-dia { position:sticky; top:0; z-index:50; background:var(--az); color:white; padding:10px 14px; border-radius:12px; margin-bottom:10px; display:none; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; box-shadow:0 4px 16px rgba(27,58,92,0.2); }
+.barra-dia.visivel { display:flex; }
+.barra-dia-info { font-family:'Barlow Condensed',sans-serif; font-size:1rem; font-weight:700; }
+.barra-dia-sub { font-size:0.72rem; opacity:0.7; }
+.barra-dia-btns { display:flex; gap:6px; }
+.barra-btn { padding:7px 12px; border-radius:8px; border:none; font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+
+/* MODAL CONSOLIDADO */
+.cons-modal-overlay { display:none; position:fixed; inset:0; background:rgba(13,27,42,0.75); z-index:910; align-items:flex-end; justify-content:center; }
+.cons-modal-overlay.aberto { display:flex; }
+.cons-modal { background:var(--br); border-radius:20px 20px 0 0; width:100%; max-height:90vh; overflow-y:auto; padding-bottom:env(safe-area-inset-bottom,12px); }
+.cons-modal-head { background:var(--vd); color:white; padding:16px 20px; border-radius:20px 20px 0 0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1; }
+.cons-section { padding:14px 16px; border-bottom:1px solid var(--bd); }
+.cons-prod-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--ci); font-size:0.82rem; }
+.cons-prod-row:last-child { border-bottom:none; }
+.cons-qtd-badge { background:var(--az); color:white; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:0.95rem; padding:3px 10px; border-radius:8px; min-width:42px; text-align:center; }
+.pedido-num { font-family:'Barlow Condensed',sans-serif; font-size:0.75rem; font-weight:700; color:var(--lv); text-transform:uppercase; letter-spacing:1px; }
+.pedido-loja { font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; font-weight:800; color:var(--az); margin:2px 0; }
+.pedido-end { font-size:0.75rem; color:var(--lv); }
+.pedido-total { font-family:'Barlow Condensed',sans-serif; font-weight:700; color:var(--or); font-size:1rem; }
+.pedido-row { display:flex; justify-content:space-between; align-items:flex-end; }
+
+/* BUSCA */
+.busca-wrap { position:relative; margin-bottom:12px; }
+.busca-input {
+  width:100%; padding:12px 14px 12px 40px;
+  border:2px solid var(--bd); border-radius:10px;
+  font-family:'Barlow',sans-serif; font-size:0.9rem;
+  color:var(--tx); background:var(--br); outline:none;
+}
+.busca-input:focus { border-color:var(--az2); }
+.busca-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:1rem; pointer-events:none; }
+
+/* ROMANEIO */
+.rom-header { background:var(--az); padding:20px; color:white; }
+.rom-logo { background:white; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:10px; }
+.rom-logo b { font-size:16px; color:var(--az); font-family:'Barlow Condensed',sans-serif; font-weight:900; }
+.rom-logo small { display:block; font-size:8px; color:var(--or); font-weight:700; letter-spacing:2px; }
+.rom-titulo { font-size:1rem; font-weight:700; margin-bottom:4px; }
+.rom-num { color:var(--or); font-size:1.4rem; font-weight:800; font-family:'Barlow Condensed',sans-serif; }
+.rom-info { font-size:0.78rem; opacity:0.7; margin-top:6px; }
+
+.rom-cliente { background:var(--azc); padding:12px 16px; border-left:3px solid var(--az2); margin-bottom:0; }
+.rom-cliente .nome { font-weight:700; font-size:0.9rem; color:var(--az); }
+.rom-cliente .end { font-size:0.75rem; color:var(--lv); margin-top:2px; }
+
+/* TABELA ITENS */
+.tabela-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+thead th { padding:8px 10px; text-align:left; background:var(--az); color:white; font-size:0.75rem; font-weight:700; }
+tbody tr:nth-child(even) { background:var(--ci); }
+tbody td { padding:8px 10px; border-bottom:1px solid var(--bd); }
+td.num { color:var(--lv); font-size:0.72rem; text-align:center; }
+td.qtd { font-weight:700; color:var(--az); text-align:center; }
+td.val { text-align:right; color:var(--vm); font-weight:600; }
+tfoot td { padding:8px 10px; font-weight:700; background:var(--orc); color:var(--az); }
+tfoot td.val { color:var(--or); font-size:1rem; }
+
+/* ASSINATURA */
+.assin-wrap { margin-bottom:14px; }
+.canvas-assin {
+  width:100%; height:160px;
+  border:2px dashed var(--bd); border-radius:10px;
+  background:var(--ci); cursor:crosshair; display:block;
+  touch-action:none;
+}
+.canvas-assin.assinado { border-color:var(--vd); border-style:solid; background:var(--vdc); }
+.assin-actions { display:flex; gap:8px; margin-top:8px; }
+.btn-limpar {
+  padding:8px 14px; border-radius:8px; border:2px solid var(--bd);
+  background:var(--br); color:var(--lv); font-family:'Barlow',sans-serif;
+  font-size:0.8rem; font-weight:600; cursor:pointer;
+}
+
+/* CAMPOS */
+.field { margin-bottom:12px; }
+.field label { display:block; font-size:0.75rem; font-weight:600; color:var(--lv); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+.field input, .field select {
+  width:100%; padding:10px 12px; border:2px solid var(--bd); border-radius:8px;
+  font-family:'Barlow',sans-serif; font-size:0.9rem; color:var(--tx);
+  background:var(--br); outline:none;
+}
+.field input:focus, .field select:focus { border-color:var(--az2); }
+
+/* BOTÕES */
+.btn { width:100%; padding:14px; border-radius:12px; border:none; font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; font-weight:700; letter-spacing:0.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.15s; margin-bottom:8px; }
+.btn:active { transform:scale(0.98); }
+.btn-az { background:var(--az); color:white; }
+.btn-or { background:var(--or); color:white; }
+.btn-vd { background:var(--vd); color:white; }
+.btn-out { background:var(--br); color:var(--az); border:2px solid var(--az); }
+
+/* SUCESSO */
+.sucesso { text-align:center; padding:30px 20px; }
+.sucesso .icon { font-size:4rem; margin-bottom:12px; }
+.sucesso h2 { font-family:'Barlow Condensed',sans-serif; font-size:1.8rem; font-weight:900; color:var(--vd); margin-bottom:8px; }
+.sucesso p { font-size:0.85rem; color:var(--lv); margin-bottom:20px; }
+
+/* UPLOAD CSV */
+.upload-area {
+  border:2px dashed var(--bd); border-radius:12px; padding:20px;
+  text-align:center; cursor:pointer; background:var(--ci);
+  position:relative; transition:all 0.15s;
+}
+.upload-area:active { background:var(--azc); border-color:var(--az2); }
+.upload-area input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.upload-icon { font-size:2.5rem; margin-bottom:8px; }
+.upload-text { font-size:0.82rem; color:var(--lv); }
+.upload-text strong { color:var(--az2); }
+
+.badge-status { display:inline-block; padding:3px 10px; border-radius:10px; font-size:0.7rem; font-weight:700; }
+.badge-pend { background:var(--amc); color:var(--am); }
+.badge-ok { background:var(--vdc); color:var(--vd); }
+
+.toast { position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px); background:var(--tx); color:white; padding:10px 20px; border-radius:10px; font-size:0.85rem; font-weight:600; z-index:999; transition:transform 0.3s; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.vd { background:var(--vd); }
+.toast.vm { background:var(--vm); }
+
+.info-row { display:flex; gap:8px; }
+.info-row .field { flex:1; }
+
+/* HISTÓRICO */
+.hist-item { background:var(--br); border-radius:12px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(27,58,92,0.07); border-left:4px solid var(--vd); cursor:pointer; transition:all 0.15s; }
+.hist-item:active { transform:scale(0.98); }
+.hist-item .hist-loja { font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; font-weight:800; color:var(--az); margin:2px 0; }
+.hist-item .hist-meta { font-size:0.72rem; color:var(--lv); }
+.hist-assin-preview { max-height:48px; border-radius:6px; border:1px solid var(--bd); background:var(--ci); margin-top:6px; }
+.hist-modal-overlay { display:none; position:fixed; inset:0; background:rgba(13,27,42,0.7); z-index:900; align-items:center; justify-content:center; padding:16px; }
+.hist-modal-overlay.aberto { display:flex; }
+.hist-modal { background:var(--br); border-radius:16px; max-width:500px; width:100%; max-height:90vh; overflow-y:auto; }
+.hist-modal-head { background:var(--az); color:white; padding:16px 20px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; }
+.hist-modal-body { padding:16px; }
+.hist-assin-full { width:100%; border-radius:10px; border:2px solid var(--vd); background:var(--vdc); }
+.btn-fechar-modal { background:rgba(255,255,255,0.2); border:none; color:white; width:32px; height:32px; border-radius:8px; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.nav-hist { position:fixed; bottom:0; left:0; right:0; background:var(--br); border-top:2px solid var(--bd); display:flex; z-index:100; }
+.nav-btn { flex:1; padding:12px 8px; border:none; background:none; font-family:'Barlow',sans-serif; font-size:0.72rem; font-weight:600; color:var(--lv); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.nav-btn.ativo { color:var(--az); }
+.nav-btn span { font-size:1.3rem; line-height:1; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="logo-row">
+      <div class="logo-box"><b>EG</b><small>SOLUÇÕES</small></div>
+      <svg width="52" height="32" viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+        <rect x="2" y="4" width="34" height="24" rx="2" fill="#FFFFFF" opacity="0.15"/>
+        <rect x="2" y="20" width="34" height="7" rx="0" fill="#E8903A" opacity="0.9"/>
+        <text x="19" y="17" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="13" fill="white">EG</text>
+        <rect x="36" y="10" width="18" height="18" rx="2" fill="#FFFFFF" opacity="0.15"/>
+        <path d="M37 10 Q38 5 41 4 L51 4 Q55 4 54 10Z" fill="#FFFFFF" opacity="0.2"/>
+        <rect x="37" y="5" width="14" height="8" rx="1" fill="#A8D4F0" opacity="0.6"/>
+        <rect x="36" y="20" width="18" height="7" fill="#E8903A" opacity="0.9"/>
+        <rect x="54" y="22" width="4" height="6" rx="1" fill="#FFFFFF" opacity="0.3"/>
+        <circle cx="12" cy="33" r="5" fill="#0D1B2A"/>
+        <circle cx="12" cy="33" r="2.5" fill="#E8903A"/>
+        <circle cx="26" cy="33" r="5" fill="#0D1B2A"/>
+        <circle cx="26" cy="33" r="2.5" fill="#E8903A"/>
+        <circle cx="46" cy="33" r="5" fill="#0D1B2A"/>
+        <circle cx="46" cy="33" r="2.5" fill="#E8903A"/>
+      </svg>
+      <div style="flex:1;color:white">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.95rem">Entregas Cirvaiha</div>
+        <div style="font-size:0.72rem;opacity:0.6">Romaneio Digital com Assinatura</div>
+      </div>
+      <button onclick="abrirConfigAS()" title="Configurar Apps Script / Drive" style="background:rgba(255,255,255,0.15);border:none;border-radius:8px;width:34px;height:34px;font-size:1.1rem;cursor:pointer;flex-shrink:0">⚙️</button>
+    </div>
+    <h1>ROMANEIO<br>DIGITAL</h1>
+    <p>Selecione o pedido · Entregue · Colete a assinatura</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="main">
+<div class="container">
+
+<!-- ══ TELA 1: SELEÇÃO DE PEDIDO ══ -->
+<div class="tela ativa" id="tela-pedidos">
+
+  <!-- Barra do dia (aparece ao marcar pedidos) -->
+  <div class="barra-dia" id="barra-dia">
+    <div>
+      <div class="barra-dia-info" id="barra-dia-info">0 lojas selecionadas</div>
+      <div class="barra-dia-sub" id="barra-dia-sub">Toque nas lojas para montar o dia</div>
+    </div>
+    <div class="barra-dia-btns">
+      <button class="barra-btn" style="background:var(--or);color:white" onclick="abrirConsolidado()">📋 Ver lista</button>
+      <button class="barra-btn" style="background:#25D366;color:white" onclick="abrirRota()">🗺️ Rota</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--azc)">📦</div>
+      <div style="flex:1"><div class="card-title">Pedidos do Dia</div><div class="card-sub" id="sub-pedidos">Carregando...</div></div>
+      <button id="btn-modo-dia" onclick="toggleModoDia()" style="background:var(--azc);border:none;border-radius:8px;padding:6px 10px;font-size:0.75rem;font-weight:700;color:var(--az);cursor:pointer;white-space:nowrap">☑️ Montar dia</button>
+    </div>
+    <div class="card-body">
+      <div class="busca-wrap">
+        <span class="busca-icon">🔍</span>
+        <input class="busca-input" type="text" placeholder="Buscar loja ou nº pedido..." oninput="filtrarPedidos(this.value)" />
+      </div>
+      <div id="lista-pedidos"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--orc)">📂</div>
+      <div><div class="card-title">Importar novo CSV</div><div class="card-sub">Exportado do Bling</div></div>
+    </div>
+    <div class="card-body">
+      <div class="upload-area">
+        <input type="file" accept=".csv" onchange="importarCSV(this)" />
+        <div class="upload-icon">📊</div>
+        <div class="upload-text"><strong>Selecionar CSV do Bling</strong><br>Arquivo exportado de Pedidos de Venda</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL CONSOLIDADO + ROTA -->
+<div class="cons-modal-overlay" id="cons-modal">
+  <div class="cons-modal">
+    <div class="cons-modal-head">
+      <div>
+        <div style="font-size:0.75rem;opacity:0.7;margin-bottom:2px">Separação do dia</div>
+        <div id="cons-titulo" style="font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;font-weight:800"></div>
+      </div>
+      <button class="btn-fechar-modal" onclick="fecharConsolidado()">✕</button>
+    </div>
+    <div id="cons-corpo"></div>
+  </div>
+</div>
+
+<!-- ══ TELA 2: ROMANEIO + ASSINATURA ══ -->
+<div class="tela" id="tela-romaneio">
+
+  <!-- Cabeçalho do romaneio -->
+  <div class="card">
+    <div class="rom-header">
+      <div class="rom-logo"><b>EG</b><small>SOLUÇÕES</small></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="rom-titulo">Relatório de Produção</div>
+          <div class="rom-num">Nº <span id="rom-num">—</span></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:0.72rem;opacity:0.7">Data</div>
+          <div style="font-weight:700" id="rom-data">—</div>
+        </div>
+      </div>
+      <div class="rom-info">47.849.037 EMERSON SILVA GUEDES · CNPJ: 47.849.037/0001-52</div>
+    </div>
+
+    <div class="rom-cliente">
+      <div class="nome" id="rom-loja">—</div>
+      <div class="end" id="rom-end">—</div>
+    </div>
+
+    <!-- Tabela de itens -->
+    <div class="tabela-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:30px">#</th>
+            <th>Descrição do Produto</th>
+            <th style="width:40px">Cód.</th>
+            <th style="width:40px">Un</th>
+            <th style="width:40px">Qtd</th>
+            <th style="width:60px;text-align:center">✓/✗</th>
+          </tr>
+        </thead>
+        <tbody id="rom-itens"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" style="font-size:0.72rem;color:var(--lv);text-align:center">
+              <span id="rom-qtd-itens"></span>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div style="padding:12px 16px;background:var(--ci);font-size:0.78rem;color:var(--lv)" id="rom-obs"></div>
+    <div id="faltas-section" style="display:none;padding:12px 16px;background:var(--vmc);border-top:2px solid var(--vm)">
+      <div style="font-weight:700;font-size:0.85rem;color:var(--vm);margin-bottom:8px">⚠️ Itens com falta — anote o motivo:</div>
+      <div id="faltas-lista"></div>
+    </div>
+  </div>
+
+  <!-- Dados do entregador e recebedor -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--vdc)">👤</div>
+      <div><div class="card-title">Dados da Entrega</div><div class="card-sub">Preencha antes de coletar a assinatura</div></div>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>Entregador <span style="color:red">*</span></label>
+        <select id="entregador">
+          <option value="">Selecione...</option>
+          <option value="Nancy">Nancy</option>
+          <option value="Emerson">Emerson</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Nome de quem recebeu <span style="color:red">*</span></label>
+        <input type="text" id="recebedor" placeholder="Nome completo do recebedor" />
+      </div>
+      <div class="info-row">
+        <div class="field">
+          <label>Cargo / Função</label>
+          <input type="text" id="cargo" placeholder="Ex: Gerente, Limpeza..." />
+        </div>
+        <div class="field">
+          <label>Data da Entrega</label>
+          <input type="date" id="hora-entrega" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Observações</label>
+        <input type="text" id="obs-entrega" placeholder="Ex: Entregue no estoque, recebeu parcial..." />
+      </div>
+    </div>
+  </div>
+
+  <!-- Foto do romaneio assinado (opcional) -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--orc)">📸</div>
+      <div><div class="card-title">Foto do Romaneio Físico</div><div class="card-sub">Opcional — use quando terceiro assinou no papel</div></div>
+    </div>
+    <div class="card-body">
+      <div class="upload-area" id="upload-rom-fisico">
+        <input type="file" accept="image/*" id="foto-romaneio-fisico" onchange="previewFotoRomaneio(this)" />
+        <div class="upload-icon">📄</div>
+        <div class="upload-text"><strong>Foto do romaneio assinado</strong><br>Opcional — galeria ou câmera</div>
+      </div>
+      <div id="preview-rom-fisico" style="margin-top:8px"></div>
+      <div style="margin-top:8px;font-size:0.75rem;color:var(--lv)">
+        💡 Se usar foto do papel, a assinatura digital abaixo não é obrigatória.
+      </div>
+    </div>
+  </div>
+
+  <!-- Assinatura digital -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--azc)">✍️</div>
+      <div><div class="card-title">Assinatura Digital</div><div class="card-sub">Assine com o dedo — ou use a foto acima</div></div>
+    </div>
+    <div class="card-body">
+      <!-- Termo de recebimento — só para clientes Cirvaiha -->
+      <div id="bloco-termo-cirvaiha" style="display:none;background:var(--ci);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:14px;font-size:0.75rem;color:var(--tx);line-height:1.6">
+        <div style="font-weight:700;font-size:0.8rem;text-align:center;letter-spacing:1px;margin-bottom:8px;color:var(--az)">TERMO DE RECEBIMENTO</div>
+        <p style="margin:0">Declaro para os fins que se fizerem necessários que recebi os produtos abaixo relacionados de acordo com os padrões estabelecidos em negociação.</p>
+        <p style="margin:8px 0 0;font-weight:600">CIRVAIHA GESTÃO DE SERVIÇOS E DESENVOLVIMENTO DE PESSOAS LTDA — CNPJ 15.040.354/0001-37</p>
+        <p style="margin:4px 0 0">Neste ato devidamente representada na forma de seu estatuto social doravante denominada cliente.</p>
+      </div>
+      <div class="assin-wrap">
+        <canvas class="canvas-assin" id="canvas-assin"></canvas>
+      </div>
+      <div class="assin-actions">
+        <button class="btn-limpar" onclick="limparAssinatura()">🗑️ Limpar assinatura</button>
+        <span id="assin-status" style="font-size:0.78rem;color:var(--lv);align-self:center;flex:1;text-align:right">Aguardando assinatura...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-mails -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--orc)">📧</div>
+      <div><div class="card-title">Envio do Comprovante</div><div class="card-sub">Destinatários do e-mail</div></div>
+    </div>
+    <div class="card-body">
+      <div id="bloco-emails-cirvaiha" style="background:var(--vdc);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:0.78rem;color:var(--vd);display:none">
+        <b>Fixos — Cirvaiha (sempre):</b><br>
+        suprimentos1cirvaiha@gmail.com<br>
+        faturamentocirvaiha@gmail.com<br>
+        barbara@cirvaiha.com
+      </div>
+      <div class="field">
+        <label>E-mail do cliente <span style="font-size:0.7rem;color:var(--lv)">(salvo por loja)</span></label>
+        <input type="email" id="email-cliente-extra" placeholder="Deixe em branco se não houver" />
+        <div style="font-size:0.72rem;color:var(--lv);margin-top:4px" id="hint-email-salvo"></div>
+      </div>
+      <div class="field">
+        <label>Seu e-mail — cópia <span style="color:red">*</span></label>
+        <input type="email" id="email-eg" value="eg.romaneios@gmail.com" />
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-vd" onclick="finalizarEntrega()" id="btn-finalizar">
+    ✅ Finalizar e Enviar Comprovante
+  </button>
+  <button class="btn btn-out" onclick="voltarLista()">
+    ← Voltar para lista
+  </button>
+
+</div>
+
+<!-- ══ TELA 3: SUCESSO ══ -->
+<div class="tela" id="tela-sucesso">
+  <div class="card">
+    <div class="sucesso">
+      <div class="icon">🎉</div>
+      <h2>Entrega Confirmada!</h2>
+      <p id="msg-sucesso">Comprovante enviado com sucesso.</p>
+      <div id="resumo-entrega" style="background:var(--ci);border-radius:10px;padding:14px;text-align:left;margin-bottom:16px;font-size:0.82rem;line-height:1.8"></div>
+      <!-- Compartilhar comprovante -->
+      <div style="background:var(--ci);border-radius:12px;padding:16px;margin-bottom:12px;text-align:left">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--lv);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">📤 Compartilhar comprovante</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn" style="background:#25D366;color:white;padding:12px" onclick="compartilharWhatsApp()">
+            💬 Enviar pelo WhatsApp
+          </button>
+          <button class="btn" style="background:#EA4335;color:white;padding:12px" onclick="compartilharEmail()">
+            📧 Enviar por E-mail
+          </button>
+          <button class="btn btn-out" style="padding:12px" onclick="abrirCompartilhar()">
+            📤 Outras opções de envio
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-az" id="btn-proxima-entrega" onclick="novaEntrega()">📦 Próxima Entrega</button>
+      <div id="hint-proxima-loja" style="font-size:0.78rem;color:var(--lv);margin-bottom:8px;display:none"></div>
+      <button class="btn btn-out" onclick="reabrirUltimoRomaneio()" style="margin-top:8px">📝 Adicionar anotação / Entrega complementar</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+</div><!-- /main -->
+
+<!-- ══ TELA 4: HISTÓRICO ══ -->
+<div class="tela" id="tela-historico">
+  <div style="background:var(--ci);min-height:100vh;">
+  <div class="container" style="padding-top:16px">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head">
+        <div class="card-icon" style="background:var(--vdc)">🗂️</div>
+        <div><div class="card-title">Histórico de Entregas</div><div class="card-sub" id="hist-sub">Comprovantes dos últimos 3 meses</div></div>
+      </div>
+      <div class="card-body">
+        <div class="busca-wrap">
+          <span class="busca-icon">🔍</span>
+          <input class="busca-input" type="text" placeholder="Buscar por loja ou pedido..." oninput="filtrarHistorico(this.value)" />
+        </div>
+        <div id="lista-historico"></div>
+      </div>
+    </div>
+    <button class="btn btn-out" style="margin-bottom:80px" onclick="mostrarTela('tela-pedidos');setNavAtivo('nav-pedidos')">← Voltar para Pedidos</button>
+  </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE DO COMPROVANTE -->
+<div class="hist-modal-overlay" id="hist-modal">
+  <div class="hist-modal">
+    <div class="hist-modal-head">
+      <div>
+        <div style="font-size:0.75rem;opacity:0.7;margin-bottom:2px">Comprovante</div>
+        <div id="hist-modal-titulo" style="font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;font-weight:800"></div>
+      </div>
+      <button class="btn-fechar-modal" onclick="fecharModalHist()">✕</button>
+    </div>
+    <div class="hist-modal-body" id="hist-modal-corpo"></div>
+  </div>
+</div>
+
+<!-- BARRA DE NAVEGAÇÃO INFERIOR -->
+<nav class="nav-hist">
+  <button class="nav-btn ativo" id="nav-pedidos" onclick="mostrarTela('tela-pedidos');setNavAtivo('nav-pedidos')">
+    <span>📦</span>Pedidos
+  </button>
+  <button class="nav-btn" id="nav-historico" onclick="abrirHistorico();setNavAtivo('nav-historico')">
+    <span>🗂️</span>Histórico
+  </button>
+</nav>
+
+<script>
+
+// pedidos de exemplo removidos
+// ── ESTADO ──────────────────────────────────────────────
+let pedidos = [{"num": "1139", "data": "27/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB PÁTIO PAULISTA SP", "endereco": "Rua Treze de Maio, 1947", "numero": "1947", "complemento": "IR PELA MAESTRO CADIM 1000 - LOJA 329", "cidade": "São Paulo", "uf": "SP", "cep": "1327900", "bairro": "Bela Vista", "obs": "NB PÁTIO PAULISTA SP", "total": "351,00", "itens": [{"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL AZULIM", "sku": "13", "un": "UN", "qtd": "4,00", "val_unit": "4,40", "val_total": "17,60"}, {"produto": "SAPONACEO CREMOSO 300ml DIVERSOS ARCHOTE", "sku": "525", "un": "UN", "qtd": "3,00", "val_unit": "8,10", "val_total": "24,30"}, {"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "2,00", "val_unit": "3,20", "val_total": "6,40"}, {"produto": "LUSTRA MOVEIS 200ML DIVERSOS", "sku": "348", "un": "UN", "qtd": "1,00", "val_unit": "5,50", "val_total": "5,50"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}, {"produto": "DESINFETANTE 5L DIVERSOS VMAX", "sku": "401", "un": "GL", "qtd": "1,00", "val_unit": "9,60", "val_total": "9,60"}, {"produto": "PAPEL INTERFOLHA CELULOSE 20X21 COM 550g FS 2db DIVERSOS", "sku": "390", "un": "PCT", "qtd": "4,00", "val_unit": "13,50", "val_total": "54,00"}, {"produto": "ESPONJA DUPLA FACE VD/AM UNIDADE TININDO 3M", "sku": "365", "un": "UN", "qtd": "3,00", "val_unit": "1,20", "val_total": "3,60"}, {"produto": "FIBRA VERDE USO GERAL DIVERSOS", "sku": "295", "un": "UN", "qtd": "3,00", "val_unit": "3,40", "val_total": "10,20"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "FLANELA BRANCA M 28X48 DIVERSOS", "sku": "143", "un": "UN", "qtd": "4,00", "val_unit": "2,10", "val_total": "8,40"}, {"produto": "SACO LIXO 200L PRETO P7 COM 100 UNIDADES FLORILIX", "sku": "78", "un": "PCT", "qtd": "1,00", "val_unit": "94,00", "val_total": "94,00"}, {"produto": "PULVERIZADOR PET 500ML TRANSP - NOBRE", "sku": "140", "un": "UN", "qtd": "1,00", "val_unit": "8,90", "val_total": "8,90"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "10,00", "val_unit": "4,20", "val_total": "42,00"}]}, {"num": "1140", "data": "27/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB HIGIENÓPOLIS", "endereco": "Avenida Higienópolis", "numero": "698", "complemento": "LOJA 353/354/355", "cidade": "São Paulo", "uf": "SP", "cep": "1238000", "bairro": "Higienópolis", "obs": "NB HIGIENÓPOLIS", "total": "232,00", "itens": [{"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "4,00", "val_unit": "4,20", "val_total": "16,80"}, {"produto": "FIBRA VERDE USO GERAL DIVERSOS", "sku": "295", "un": "UN", "qtd": "4,00", "val_unit": "3,40", "val_total": "13,60"}, {"produto": "PANO MICROFIBRA 40X60 UNIDADE CAEBI", "sku": "527", "un": "UN", "qtd": "8,00", "val_unit": "13,00", "val_total": "104,00"}, {"produto": "LUVA LATEX M AMARELA FIT SANRO", "sku": "395", "un": "UN", "qtd": "2,00", "val_unit": "8,00", "val_total": "16,00"}, {"produto": "SAPONACEO CREMOSO 300ml DIVERSOS ARCHOTE", "sku": "525", "un": "UN", "qtd": "2,00", "val_unit": "8,10", "val_total": "16,20"}, {"produto": "FIBRA BRANCA LIMPEZA LEVE UNIDADE DIVERSOS", "sku": "304", "un": "UN", "qtd": "3,00", "val_unit": "3,80", "val_total": "11,40"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "1,00", "val_unit": "6,50", "val_total": "6,50"}, {"produto": "LUSTRA MOVEIS 200ML DIVERSOS", "sku": "348", "un": "UN", "qtd": "3,00", "val_unit": "5,50", "val_total": "16,50"}]}, {"num": "1141", "data": "27/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB VILLA LOBOS", "endereco": "Avenida Doutora Ruth Cardoso", "numero": "4777", "complemento": "Loja SVL00143 1 Piso Conh Shop Villa Lobos", "cidade": "São Paulo", "uf": "SP", "cep": "5477903", "bairro": "Jardim Universidade Pinheiros", "obs": "NB VILLA LOBOS", "total": "103,50", "itens": [{"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "4,00", "val_unit": "3,20", "val_total": "12,80"}, {"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL VEJA", "sku": "6", "un": "UN", "qtd": "2,00", "val_unit": "7,20", "val_total": "14,40"}, {"produto": "LIMPA VIDROS 500ML AGI FACIL", "sku": "176", "un": "UN", "qtd": "3,00", "val_unit": "4,40", "val_total": "13,20"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "2,00", "val_unit": "6,50", "val_total": "13,00"}, {"produto": "LUVA SANRO FIT PQ AMARELA CA 50694", "sku": "423", "un": "PA", "qtd": "3,00", "val_unit": "8,00", "val_total": "24,00"}, {"produto": "ESPONJA DUPLA FACE VD/AM UNIDADE TININDO 3M", "sku": "365", "un": "UN", "qtd": "8,00", "val_unit": "1,20", "val_total": "9,60"}, {"produto": "LUSTRA MOVEIS 200ML DIVERSOS", "sku": "348", "un": "UN", "qtd": "3,00", "val_unit": "5,50", "val_total": "16,50"}]}, {"num": "1142", "data": "27/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB MORUMBI", "endereco": "Avenida Roque Petroni Júnior", "numero": "1089", "complemento": "Loja 209/210/211", "cidade": "São Paulo", "uf": "SP", "cep": "4707900", "bairro": "Jardim das Acácias", "obs": "NB MORUMBI", "total": "83,70", "itens": [{"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "4,00", "val_unit": "3,20", "val_total": "12,80"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "MULTIUSO 500ML AZULIM ORIGINAL", "sku": "491", "un": "UN", "qtd": "1,00", "val_unit": "4,40", "val_total": "4,40"}]}, {"num": "1145", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB BELA VISTA", "endereco": "Avenida Paulista", "numero": "2113", "complemento": "Loja 108 e 128", "cidade": "São Paulo", "uf": "SP", "cep": "1311300", "bairro": "Bela Vista", "obs": "NB BELA VISTA", "total": "649,30", "itens": [{"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "2,00", "val_unit": "96,00", "val_total": "192,00"}, {"produto": "SACO LIXO 060L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "281", "un": "PCT", "qtd": "2,00", "val_unit": "49,00", "val_total": "98,00"}, {"produto": "ODORIZADOR 360ML  AERO DIVERSOS BOM AR", "sku": "474", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "PAPEL HIGIENICO ROLAO 100% CEL. 8 ROLOS FS PRIME ECO PAPEIS", "sku": "8", "un": "PCT", "qtd": "2,00", "val_unit": "49,00", "val_total": "98,00"}, {"produto": "PAPEL INTERFOLHA CELULOSE 20X21 COM 550g FS 2db DIVERSOS", "sku": "390", "un": "PCT", "qtd": "4,00", "val_unit": "13,50", "val_total": "54,00"}, {"produto": "LUSTRA MOVEIS 200ML DIVERSOS", "sku": "348", "un": "UN", "qtd": "3,00", "val_unit": "5,50", "val_total": "16,50"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "1,00", "val_unit": "9,60", "val_total": "9,60"}, {"produto": "SAPONACEO CREMOSO 300ml DIVERSOS ARCHOTE", "sku": "525", "un": "UN", "qtd": "2,00", "val_unit": "8,10", "val_total": "16,20"}, {"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "2,00", "val_unit": "3,20", "val_total": "6,40"}, {"produto": "LUVA LATEX G AMARELA FIT SANRO", "sku": "396", "un": "UN", "qtd": "3,00", "val_unit": "8,00", "val_total": "24,00"}, {"produto": "ESPONJA DUPLA FACE VD/AM UNIDADE TININDO 3M", "sku": "365", "un": "UN", "qtd": "1,00", "val_unit": "1,20", "val_total": "1,20"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "12,00", "val_unit": "4,20", "val_total": "50,40"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}]}, {"num": "1146", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB CAMPINAS", "endereco": "Avenida Iguatemi,", "numero": "777", "complemento": "Loja 17", "cidade": "Campinas", "uf": "SP", "cep": "13092902", "bairro": "Vila Brandina", "obs": "NB CAMPINAS", "total": "25,30", "itens": [{"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL AZULIM", "sku": "13", "un": "UN", "qtd": "2,00", "val_unit": "4,40", "val_total": "8,80"}, {"produto": "LUSTRA MOVEIS 200ML DIVERSOS", "sku": "348", "un": "UN", "qtd": "3,00", "val_unit": "5,50", "val_total": "16,50"}]}, {"num": "1147", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB IMIGRANTES", "endereco": "Estrada da Cama Patente", "numero": "2375", "complemento": "", "cidade": "São Bernardo do Campo", "uf": "SP", "cep": "9842100", "bairro": "Alvarenga", "obs": "NB IMIGRANTES", "total": "243,80", "itens": [{"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "LIMPADOR 1L KLYO FLOOR LIMP PESADO PARA PISOS RENKO", "sku": "39", "un": "UN", "qtd": "1,00", "val_unit": "45,00", "val_total": "45,00"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "2,00", "val_unit": "4,20", "val_total": "8,40"}, {"produto": "FLANELA BRANCA M 28X48 DIVERSOS", "sku": "143", "un": "UN", "qtd": "2,00", "val_unit": "2,10", "val_total": "4,20"}, {"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}]}, {"num": "1148", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB GUARULHOS", "endereco": "Rodovia Presidente Dutra", "numero": "KM 222", "complemento": "Shopping Só Marcas", "cidade": "Guarulhos", "uf": "SP", "cep": "7034904", "bairro": "Porto da Igreja", "obs": "NB GUARULHOS", "total": "125,80", "itens": [{"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL VEJA", "sku": "6", "un": "UN", "qtd": "2,00", "val_unit": "7,20", "val_total": "14,40"}, {"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "1,00", "val_unit": "3,20", "val_total": "3,20"}, {"produto": "PANO MICROFIBRA 30x30 UNIDADE CAEBI", "sku": "526", "un": "UN", "qtd": "5,00", "val_unit": "4,80", "val_total": "24,00"}, {"produto": "LIMPA VIDROS 500ML AGI FACIL", "sku": "176", "un": "UN", "qtd": "2,00", "val_unit": "4,40", "val_total": "8,80"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "PULVERIZADOR PET 500ML TRANSP - NOBRE", "sku": "140", "un": "UN", "qtd": "1,00", "val_unit": "8,90", "val_total": "8,90"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}]}, {"num": "1149", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "FILA ATIBAIA", "endereco": "Rua Luiz Onofre de Amorim", "numero": "50", "complemento": "Outlet Fernão Dias", "cidade": "Atibaia", "uf": "SP", "cep": "12948009", "bairro": "Parque Fernão Dias", "obs": "FILA ATIBAIA", "total": "265,40", "itens": [{"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "4,00", "val_unit": "9,60", "val_total": "38,40"}, {"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "94,00", "val_total": "94,00"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}, {"produto": "FLANELA BRANCA M 28X48 DIVERSOS", "sku": "143", "un": "UN", "qtd": "5,00", "val_unit": "2,10", "val_total": "10,50"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "3,00", "val_unit": "15,50", "val_total": "46,50"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "8,00", "val_unit": "4,20", "val_total": "33,60"}, {"produto": "ESPONJA DUPLA FACE VD/AM UNIDADE TININDO 3M", "sku": "365", "un": "UN", "qtd": "2,00", "val_unit": "1,20", "val_total": "2,40"}]}, {"num": "1150", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "FILA ITAQUAQUECETUBA", "endereco": "Estrada de São Bento", "numero": "9550", "complemento": "", "cidade": "Itaquaquecetuba", "uf": "SP", "cep": "8590315", "bairro": "Jardim Josely", "obs": "FILA ITAQUAQUECETUBA", "total": "67,00", "itens": [{"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "2,00", "val_unit": "4,20", "val_total": "8,40"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "2,00", "val_unit": "6,50", "val_total": "13,00"}, {"produto": "MULTIUSO 500ML AZULIM ORIGINAL", "sku": "491", "un": "UN", "qtd": "2,00", "val_unit": "4,40", "val_total": "8,80"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "LIMPA VIDROS 500ML AGI FACIL", "sku": "176", "un": "UN", "qtd": "4,00", "val_unit": "4,40", "val_total": "17,60"}]}, {"num": "1151", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "FILA GUARULHOS", "endereco": "Rodovia Presidente Dutra,", "numero": "km 222,2", "complemento": "Outlet Só Marcas", "cidade": "Guarulhos", "uf": "SP", "cep": "7034904", "bairro": "Porto da Igreja", "obs": "FILA GUARULHOS", "total": "186,20", "itens": [{"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}, {"produto": "PAPEL INTERFOLHA CELULOSE 20X21 COM 550g FS 2db DIVERSOS", "sku": "390", "un": "PCT", "qtd": "3,00", "val_unit": "13,50", "val_total": "40,50"}, {"produto": "LUVA LATEX M AMARELA FIT SANRO", "sku": "395", "un": "UN", "qtd": "2,00", "val_unit": "8,00", "val_total": "16,00"}, {"produto": "PANO MICROFIBRA 30x30 UNIDADE CAEBI", "sku": "526", "un": "UN", "qtd": "4,00", "val_unit": "4,80", "val_total": "19,20"}, {"produto": "PA LIXO PLAST CABO 60CM DIVERSOS", "sku": "419", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}]}, {"num": "1152", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "FILA SAO ROQUE", "endereco": "Rua Rafael Dias Costa", "numero": "140", "complemento": "", "cidade": "São Roque", "uf": "SP", "cep": "18132852", "bairro": "Dona Catarina", "obs": "FILA SAO ROQUE", "total": "343,40", "itens": [{"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "2,00", "val_unit": "96,00", "val_total": "192,00"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "5,00", "val_unit": "9,60", "val_total": "48,00"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "6,00", "val_unit": "4,20", "val_total": "25,20"}, {"produto": "PANO MICROFIBRA 30x30 UNIDADE CAEBI", "sku": "526", "un": "UN", "qtd": "8,00", "val_unit": "4,80", "val_total": "38,40"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL AZULIM", "sku": "13", "un": "UN", "qtd": "2,00", "val_unit": "4,40", "val_total": "8,80"}]}, {"num": "1153", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "FILA LIGTH SAO PAULO", "endereco": "Rua Coronel Xavier de Toledo", "numero": "23", "complemento": "", "cidade": "São Paulo", "uf": "SP", "cep": "1048900", "bairro": "República", "obs": "FILA SÃO PAULO SP", "total": "362,90", "itens": [{"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "2,00", "val_unit": "52,00", "val_total": "104,00"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "PA LIXO PLAST CABO 60CM DIVERSOS", "sku": "419", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}, {"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "2,00", "val_unit": "6,50", "val_total": "13,00"}, {"produto": "ESCOVA OVAL BASE PLASTICA DIVERSOS", "sku": "218", "un": "UN", "qtd": "1,00", "val_unit": "5,20", "val_total": "5,20"}, {"produto": "LUSTRA MOVEIS 200ML DIVERSOS", "sku": "348", "un": "UN", "qtd": "2,00", "val_unit": "5,50", "val_total": "11,00"}, {"produto": "LUVA LATEX G AMARELA FIT SANRO", "sku": "396", "un": "UN", "qtd": "2,00", "val_unit": "8,00", "val_total": "16,00"}, {"produto": "REFIL MOP PO HI PROF 040CM CERTEC", "sku": "341", "un": "UN", "qtd": "1,00", "val_unit": "44,00", "val_total": "44,00"}]}, {"num": "1154", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "FILA IMIGRANTES SP", "endereco": "Estrada da Cama Patente", "numero": "2375", "complemento": "", "cidade": "São Bernardo do Campo", "uf": "SP", "cep": "9842100", "bairro": "Alvarenga", "obs": "FILA IMIGRANTES SP", "total": "248,00", "itens": [{"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "LIMPADOR 1L KLYO FLOOR LIMP PESADO PARA PISOS RENKO", "sku": "39", "un": "UN", "qtd": "1,00", "val_unit": "45,00", "val_total": "45,00"}, {"produto": "ODORIZADOR 360ML  AERO DIVERSOS BOM AR", "sku": "474", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "3,00", "val_unit": "4,20", "val_total": "12,60"}, {"produto": "FLANELA BRANCA M 28X48 DIVERSOS", "sku": "143", "un": "UN", "qtd": "2,00", "val_unit": "2,10", "val_total": "4,20"}, {"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}]}, {"num": "1155", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE CAMPINAS", "endereco": "Avenida Iguatemi", "numero": "777", "complemento": "", "cidade": "Campinas", "uf": "SP", "cep": "13092902", "bairro": "Vila Brandina", "obs": "LACOSTE CAMPINAS", "total": "172,60", "itens": [{"produto": "LUVA LATEX M AMARELA FIT SANRO", "sku": "395", "un": "UN", "qtd": "3,00", "val_unit": "8,00", "val_total": "24,00"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "3,00", "val_unit": "4,20", "val_total": "12,60"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}, {"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}]}, {"num": "1156", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE IGUATEMI", "endereco": "Avenida Brigadeiro Faria Lima", "numero": "2232", "complemento": "LOJA 4A", "cidade": "São Paulo", "uf": "SP", "cep": "1451000", "bairro": "Jardim Paulistano", "obs": "LACOSTE IGUATEMI", "total": "103,90", "itens": [{"produto": "LUVA LATEX G  AZUL SILVER GRIP DANNY", "sku": "318", "un": "UN", "qtd": "2,00", "val_unit": "11,90", "val_total": "23,80"}, {"produto": "BALDE PLAST 12 LTS ESPECIAL PRETO C/ ALÇA DE FERRO", "sku": "171", "un": "UN", "qtd": "1,00", "val_unit": "18,20", "val_total": "18,20"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "2,00", "val_unit": "3,20", "val_total": "6,40"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "1,00", "val_unit": "15,50", "val_total": "15,50"}, {"produto": "FLANELA BRANCA M 28X48 DIVERSOS", "sku": "143", "un": "UN", "qtd": "3,00", "val_unit": "2,10", "val_total": "6,30"}]}, {"num": "1157", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE MORUMBI", "endereco": "Avenida Roque Petroni Júnior, 1089", "numero": "1089", "complemento": "LOJA 151", "cidade": "São Paulo", "uf": "SP", "cep": "4707900", "bairro": "Jardim das Acácias", "obs": "LACOSTE MORUMBI", "total": "273,70", "itens": [{"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "1,00", "val_unit": "9,60", "val_total": "9,60"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}, {"produto": "SACO LIXO 110L TRANSPARANTE COM 100 UNIDADES DIVERSOS", "sku": "278", "un": "PT", "qtd": "1,00", "val_unit": "66,00", "val_total": "66,00"}, {"produto": "SACO LIXO 120L VERMELHO COM 100 UNIDADES DIVERSOS", "sku": "337", "un": "PCT", "qtd": "1,00", "val_unit": "66,00", "val_total": "66,00"}, {"produto": "SACO LIXO 100L PRETO COM 100 UNIDADES P4 FLORILIX", "sku": "528", "un": "PCT", "qtd": "1,00", "val_unit": "72,00", "val_total": "72,00"}, {"produto": "SAPONACEO CREMOSO 300ml DIVERSOS ARCHOTE", "sku": "525", "un": "UN", "qtd": "1,00", "val_unit": "8,10", "val_total": "8,10"}]}, {"num": "1158", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE AIRTON SENNA ITAQUA", "endereco": "Estrada de São Bento", "numero": "9550", "complemento": "OUTLET PREMIUM GDE SP", "cidade": "Itaquaquecetuba", "uf": "SP", "cep": "8590315", "bairro": "Jardim Josely", "obs": "LACOSTE AIRTON SENNA ITAQUA", "total": "201,40", "itens": [{"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "2,00", "val_unit": "4,20", "val_total": "8,40"}, {"produto": "SACO LIXO 060L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "281", "un": "PCT", "qtd": "1,00", "val_unit": "49,00", "val_total": "49,00"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}, {"produto": "LIMPA VIDROS 500ML AGI FACIL", "sku": "176", "un": "UN", "qtd": "4,00", "val_unit": "4,40", "val_total": "17,60"}, {"produto": "PULVERIZADOR PET 500ML TRANSP - NOBRE", "sku": "140", "un": "UN", "qtd": "1,00", "val_unit": "8,90", "val_total": "8,90"}, {"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL AZULIM", "sku": "13", "un": "UN", "qtd": "2,00", "val_unit": "4,40", "val_total": "8,80"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "1,00", "val_unit": "6,50", "val_total": "6,50"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}]}, {"num": "1159", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE IMIGRANTES", "endereco": "Estrada da Cama Patente", "numero": "2375", "complemento": "", "cidade": "São Bernardo do Campo", "uf": "SP", "cep": "9842100", "bairro": "Alvarenga", "obs": "LACOSTE IMIGRANTES", "total": "214,50", "itens": [{"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "3,00", "val_unit": "9,60", "val_total": "28,80"}, {"produto": "SACO LIXO 110L TRANSPARANTE COM 100 UNIDADES DIVERSOS", "sku": "278", "un": "PT", "qtd": "2,00", "val_unit": "66,00", "val_total": "132,00"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "3,00", "val_unit": "17,90", "val_total": "53,70"}]}, {"num": "1160", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE LIGTH SP", "endereco": "Rua Coronel Xavier de Toledo", "numero": "23", "complemento": "4 ANDAR", "cidade": "São Paulo", "uf": "SP", "cep": "1048900", "bairro": "República", "obs": "LACOSTE LIGTH SP", "total": "28,20", "itens": [{"produto": "PANO MICROFIBRA 30x30 UNIDADE CAEBI", "sku": "526", "un": "UN", "qtd": "2,00", "val_unit": "4,80", "val_total": "9,60"}, {"produto": "ESPONJA DUPLA FACE VD/AM UNIDADE TININDO 3M", "sku": "365", "un": "UN", "qtd": "2,00", "val_unit": "1,20", "val_total": "2,40"}, {"produto": "SAPONACEO CREMOSO 300ml DIVERSOS ARCHOTE", "sku": "525", "un": "UN", "qtd": "2,00", "val_unit": "8,10", "val_total": "16,20"}]}, {"num": "1161", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE HIGIENOPOLIS", "endereco": "Avenida Higienópolis", "numero": "698", "complemento": "LOJA 206 - PISO PACAEMBU", "cidade": "São Paulo", "uf": "SP", "cep": "1238000", "bairro": "Higienópolis", "obs": "LACOSTE HIGIENOPOLIS", "total": "112,40", "itens": [{"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "2,00", "val_unit": "4,20", "val_total": "8,40"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "2,00", "val_unit": "52,00", "val_total": "104,00"}]}, {"num": "1162", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE ITUPEVA", "endereco": "Estrada Joaquim Bueno Neto", "numero": "9999", "complemento": "", "cidade": "Itupeva", "uf": "SP", "cep": "13299600", "bairro": "Rio Abaixo", "obs": "LACOSTE ITUPEVA", "total": "211,70", "itens": [{"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}, {"produto": "LUVA LATEX M AZUL SILVER GRIP DANNY", "sku": "258", "un": "UN", "qtd": "2,00", "val_unit": "11,90", "val_total": "23,80"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "2,00", "val_unit": "6,50", "val_total": "13,00"}, {"produto": "PULVERIZADOR PET 500ML TRANSP - NOBRE", "sku": "140", "un": "UN", "qtd": "2,00", "val_unit": "8,90", "val_total": "17,80"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "ARMACAO MOP PO PROFI 60CM BRALIMPIA", "sku": "115", "un": "PC", "qtd": "1,00", "val_unit": "58,80", "val_total": "58,80"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "3,00", "val_unit": "4,20", "val_total": "12,60"}]}, {"num": "1163", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE VITAL BRASIL", "endereco": "Avenida Vital Brasil", "numero": "583", "complemento": "", "cidade": "São Paulo", "uf": "SP", "cep": "5503001", "bairro": "Butantã", "obs": "LACOSTE VITAL BRASIL", "total": "317,40", "itens": [{"produto": "LUSTRA MOVEIS 200ML DIVERSOS", "sku": "348", "un": "UN", "qtd": "1,00", "val_unit": "5,50", "val_total": "5,50"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "2,00", "val_unit": "9,60", "val_total": "19,20"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}, {"produto": "PAPEL HIGIENICO ROLAO BRANCO 8 ROLOS FS POP", "sku": "409", "un": "PCT", "qtd": "5,00", "val_unit": "29,00", "val_total": "145,00"}, {"produto": "LIMPA VIDROS 500ML AGI FACIL", "sku": "176", "un": "UN", "qtd": "2,00", "val_unit": "4,40", "val_total": "8,80"}, {"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "3,00", "val_unit": "3,80", "val_total": "11,40"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "2,00", "val_unit": "6,50", "val_total": "13,00"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "FLANELA BRANCA M 28X48 DIVERSOS", "sku": "143", "un": "UN", "qtd": "5,00", "val_unit": "2,10", "val_total": "10,50"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "5,00", "val_unit": "4,20", "val_total": "21,00"}]}, {"num": "1164", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE MOEMA", "endereco": "Rua Gaivota", "numero": "1210", "complemento": "", "cidade": "São Paulo", "uf": "SP", "cep": "4522033", "bairro": "Moema", "obs": "LACOSTE MOEMA", "total": "652,70", "itens": [{"produto": "SACO LIXO 110L TRANSPARANTE COM 100 UNIDADES DIVERSOS", "sku": "278", "un": "PT", "qtd": "2,00", "val_unit": "66,00", "val_total": "132,00"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "3,00", "val_unit": "9,60", "val_total": "28,80"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "3,00", "val_unit": "4,20", "val_total": "12,60"}, {"produto": "LUVA LATEX M AMARELA FIT SANRO", "sku": "395", "un": "UN", "qtd": "2,00", "val_unit": "8,00", "val_total": "16,00"}, {"produto": "LIMPA VIDROS 1L CONCENTRADO KLYO RENKO", "sku": "38", "un": "UN", "qtd": "2,00", "val_unit": "28,90", "val_total": "57,80"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "PAPEL INTERFOLHA CELULOSE 20X21 COM 550g FS 2db DIVERSOS", "sku": "390", "un": "PCT", "qtd": "12,00", "val_unit": "13,50", "val_total": "162,00"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "LIMPADOR 5L KLYO FLOOR LIMP PESADO PARA PISOS RENKO", "sku": "52", "un": "GL", "qtd": "1,00", "val_unit": "158,00", "val_total": "158,00"}]}, {"num": "1165", "data": "28/05/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE ARICANDUVA", "endereco": "Avenida Aricanduva", "numero": "5555", "complemento": "ANEXO ARCOS 57.58.59", "cidade": "São Paulo", "uf": "SP", "cep": "3527904", "bairro": "Vila Aricanduva", "obs": "LACOSTE ARICANDUVA", "total": "366,80", "itens": [{"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "SACO LIXO 110L TRANSPARANTE COM 100 UNIDADES DIVERSOS", "sku": "278", "un": "PT", "qtd": "1,00", "val_unit": "65,00", "val_total": "65,00"}, {"produto": "DETERGENTE  5L NEUTRO ESPECIAL LARILIMP", "sku": "232", "un": "GL", "qtd": "1,00", "val_unit": "16,00", "val_total": "16,00"}, {"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL VEJA", "sku": "6", "un": "UN", "qtd": "4,00", "val_unit": "7,20", "val_total": "28,80"}, {"produto": "DESINFETANTE 5L DIVERSOS LARILIMP", "sku": "231", "un": "GL", "qtd": "5,00", "val_unit": "9,60", "val_total": "48,00"}, {"produto": "ESPONJA DUPLA FACE VD/AM UNIDADE TININDO 3M", "sku": "365", "un": "UN", "qtd": "4,00", "val_unit": "1,20", "val_total": "4,80"}, {"produto": "SABAO PO 1KG FLASH EM SACHE PLASTICO", "sku": "30", "un": "UN", "qtd": "1,00", "val_unit": "6,50", "val_total": "6,50"}, {"produto": "SACO LIXO 060L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "281", "un": "PCT", "qtd": "1,00", "val_unit": "49,00", "val_total": "49,00"}, {"produto": "LUVA LATEX M AMARELA FIT SANRO", "sku": "395", "un": "UN", "qtd": "4,00", "val_unit": "8,00", "val_total": "32,00"}, {"produto": "PANO MICROFIBRA 30x30 UNIDADE CAEBI", "sku": "526", "un": "UN", "qtd": "4,00", "val_unit": "4,80", "val_total": "19,20"}, {"produto": "ALCOOL LIQ 70 INPM 5L DIVERSOS", "sku": "437", "un": "GL", "qtd": "1,00", "val_unit": "52,00", "val_total": "52,00"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}]}, {"num": "1166", "data": "01/06/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "LACOSTE OUTLET CATARINA", "endereco": "Rua Rafael Dias Costa", "numero": "140", "complemento": "", "cidade": "São Roque", "uf": "SP", "cep": "18132852", "bairro": "Dona Catarina", "obs": "LACOSTE OUTLET CATARINA", "total": "269,20", "itens": [{"produto": "REFIL MOP PO HI PROF 040CM CERTEC", "sku": "341", "un": "UN", "qtd": "1,00", "val_unit": "45,00", "val_total": "45,00"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}, {"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}, {"produto": "CABO ACO 3M EXTENSOR 2 ESTAGIOS BETTANIN//TIGRE", "sku": "421", "un": "UN", "qtd": "1,00", "val_unit": "72,20", "val_total": "72,20"}, {"produto": "LUVA LATEX M AMARELA FIT SANRO", "sku": "395", "un": "UN", "qtd": "2,00", "val_unit": "8,00", "val_total": "16,00"}]}, {"num": "1167", "data": "01/06/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "FILA ITUPEVA", "endereco": "Estrada Joaquim Bueno Neto", "numero": "9999", "complemento": "", "cidade": "Itupeva", "uf": "SP", "cep": "13299600", "bairro": "Rio Abaixo", "obs": "FILA ITUPEVA", "total": "235,60", "itens": [{"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}, {"produto": "REFIL MOP PO HI PROF 060CM CERTEC", "sku": "342", "un": "UN", "qtd": "1,00", "val_unit": "56,60", "val_total": "56,60"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "SACO ALVEJADO (PANO DE CHÃO) DIVERSOS M 40X60", "sku": "540", "un": "UN", "qtd": "4,00", "val_unit": "4,20", "val_total": "16,80"}, {"produto": "RODO PLAST 40CM PUXA E SECA COM CABO DE MAD REVESTIDO DIVERSOS", "sku": "101", "un": "UN", "qtd": "1,00", "val_unit": "9,20", "val_total": "9,20"}, {"produto": "DETERGENTE 500ML NEUTRO DIVERSOS", "sku": "210", "un": "UN", "qtd": "4,00", "val_unit": "3,80", "val_total": "15,20"}, {"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL VEJA", "sku": "6", "un": "UN", "qtd": "3,00", "val_unit": "7,00", "val_total": "21,00"}, {"produto": "FLANELA BRANCA M 28X48 DIVERSOS", "sku": "143", "un": "UN", "qtd": "3,00", "val_unit": "2,10", "val_total": "6,30"}]}, {"num": "1168", "data": "01/06/2026", "comprador": "CIRVAIHA GESTAO DE SERVICOS E DESENVOLVIMENTO DE PESSOAS LTD", "loja": "NB SÃO ROQUE", "endereco": "Rua Rafael Dias Costa", "numero": "140", "complemento": "", "cidade": "São Roque", "uf": "SP", "cep": "18132852", "bairro": "Dona Catarina", "obs": "NB SÃO ROQUE", "total": "369,00", "itens": [{"produto": "LIMPADOR MULTIUSO 500ML ORIGINAL AZULIM", "sku": "13", "un": "UN", "qtd": "1,00", "val_unit": "4,40", "val_total": "4,40"}, {"produto": "ALCOOL GEL NEUTRO 5L DIVERSOS", "sku": "453", "un": "GL", "qtd": "1,00", "val_unit": "54,00", "val_total": "54,00"}, {"produto": "REFIL MOP PO HI PROF 040CM CERTEC", "sku": "341", "un": "UN", "qtd": "1,00", "val_unit": "44,00", "val_total": "44,00"}, {"produto": "ESPANADOR ELETROSTATICO DIVERSOS CERTEC", "sku": "381", "un": "PC", "qtd": "1,00", "val_unit": "29,00", "val_total": "29,00"}, {"produto": "ODORIZADOR 400ML  AERO DIVERSOS ULTRA FRESH", "sku": "22", "un": "UN", "qtd": "2,00", "val_unit": "15,50", "val_total": "31,00"}, {"produto": "RODO PLAST 40CM PUXA E SECA COM CABO DE MAD REVESTIDO DIVERSOS", "sku": "101", "un": "UN", "qtd": "1,00", "val_unit": "12,50", "val_total": "12,50"}, {"produto": "VASSOURA TIPO NOVICA GENUINA COM CABO AGUIA", "sku": "15", "un": "UN", "qtd": "1,00", "val_unit": "14,50", "val_total": "14,50"}, {"produto": "INSETICIDA 400ML AERO DIVERSOS", "sku": "286", "un": "UN", "qtd": "2,00", "val_unit": "17,00", "val_total": "34,00"}, {"produto": "DESINFETANTE 5L DIVERSOS VMAX", "sku": "401", "un": "GL", "qtd": "1,00", "val_unit": "9,60", "val_total": "9,60"}, {"produto": "SACO LIXO 200L TRANSPARENTE P5 COM 100 UNIDADES DIVERSOS", "sku": "58", "un": "PCT", "qtd": "1,00", "val_unit": "96,00", "val_total": "96,00"}, {"produto": "SACO LIXO 040L TRANSPARENTE COM 100 UNIDADES DIVERSOS", "sku": "57", "un": "PCT", "qtd": "1,00", "val_unit": "40,00", "val_total": "40,00"}]}, {"num": "1169", "data": "02/06/2026", "comprador": "F.C CLINICA DE ODONTOLOGIA E IMPLANTES LTDA", "loja": "F.C CLINICA DE ODONTOLOGIA E IMPLANTES LTDA", "endereco": "Rua Antônio Marciano", "numero": "54", "complemento": "", "cidade": "Guarulhos", "uf": "SP", "cep": "7135373", "bairro": "Jardim Adriana", "obs": "", "total": "243,80", "itens": [{"produto": "PAPEL HIGIENICO 30M - 16 PACOTES COM 4 ROLOS 30M FOLHA DUPLA - PERSONAL VIP", "sku": "541", "un": "FD", "qtd": "1,00", "val_unit": "132,00", "val_total": "132,00"}, {"produto": "DESINFETANTE 5L DIVERSOS VMAX", "sku": "401", "un": "GL", "qtd": "2,00", "val_unit": "12,50", "val_total": "25,00"}, {"produto": "DETERGENTE  5L NEUTRO ESPECIAL LARILIMP", "sku": "232", "un": "GL", "qtd": "1,00", "val_unit": "16,80", "val_total": "16,80"}, {"produto": "PAPEL INTERFOLHA CELULOSE 20X21 COM 550g FS 2db DIVERSOS", "sku": "390", "un": "PCT", "qtd": "5,00", "val_unit": "14,00", "val_total": "70,00"}]}]; // carregado do Drive ou via CSV
+let pedidoAtual = null;
+let assinando = false;
+let temAssinatura = false;
+
+// ── FOTO ROMANEIO FÍSICO ────────────────────────────────
+let fotoRomaneiofisicoBase64 = null;
+
+function previewFotoRomaneio(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fotoRomaneiofisicoBase64 = e.target.result;
+    document.getElementById('preview-rom-fisico').innerHTML =
+      `<img src="${e.target.result}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:2px solid var(--vd)">
+       <div style="font-size:0.72rem;color:var(--vd);margin-top:4px;font-weight:600">✅ Foto capturada</div>`;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ── STATUS DOS ITENS ────────────────────────────────────
+let itemStatus = {};
+
+function setItemStatus(idx, status, btn) {
+  itemStatus[idx] = status;
+  const row = document.getElementById('item-row-' + idx);
+
+  // Reset row color
+  row.classList.remove('item-ok', 'item-falta');
+  // Reset all buttons in this row
+  row.querySelectorAll('button').forEach(b => {
+    b.style.background = 'white';
+    b.style.opacity = '0.5';
+  });
+  // Highlight selected button
+  btn.style.background = status === 'ok' ? '#27AE60' : '#C0392B';
+  btn.style.color = 'white';
+  btn.style.opacity = '1';
+  row.classList.add(status === 'ok' ? 'item-ok' : 'item-falta');
+
+  // Show/hide falta section
+  atualizarFaltasSection();
+}
+
+function atualizarFaltasSection() {
+  const faltasSection = document.getElementById('faltas-section');
+  const faltasLista   = document.getElementById('faltas-lista');
+  const itensComFalta = Object.entries(itemStatus).filter(([, s]) => s === 'falta');
+
+  if (itensComFalta.length === 0) {
+    faltasSection.style.display = 'none';
+    return;
   }
-  return sh;
+
+  faltasSection.style.display = '';
+  faltasLista.innerHTML = itensComFalta.map(([idx]) => {
+    const item = pedidoAtual.itens[parseInt(idx)];
+    const obsAtual = document.getElementById('falta-obs-' + idx) ?
+      document.getElementById('falta-obs-' + idx).value : '';
+    return `<div style="margin-bottom:10px">
+      <div style="font-weight:700;font-size:0.82rem;color:var(--vm)">✗ ${item.produto} (${parseFloat(item.qtd).toFixed(0)} ${item.un})</div>
+      <input class="falta-input" id="falta-obs-${idx}" placeholder="Motivo: ex. falta no estoque, erro de separação..." value="${obsAtual}" />
+    </div>`;
+  }).join('');
 }
 
-// ── CORS helper ─────────────────────────────────────────────
-function jsonResponse(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+function coletarFaltas() {
+  return Object.entries(itemStatus)
+    .filter(([, s]) => s === 'falta')
+    .map(([idx]) => {
+      const item = pedidoAtual.itens[parseInt(idx)];
+      const obsEl = document.getElementById('falta-obs-' + idx);
+      return {
+        idx: parseInt(idx),
+        produto: item.produto,
+        qtd: item.qtd,
+        un: item.un,
+        obs: obsEl ? obsEl.value : ''
+      };
+    });
 }
 
-// ── Roteador ─────────────────────────────────────────────────
-function doGet(e)  { return route(e); }
-function doPost(e) { return route(e); }
+// ── REABRIR ROMANEIO ────────────────────────────────────
+function reabrirUltimoRomaneio() {
+  if (!pedidoAtual) { toast('Nenhum romaneio para reabrir', 'vm'); return; }
 
-function route(e) {
-  try {
-    const action = e.parameter.action || '';
-    // Body pode vir via POST ou via parâmetro 'data'
-    let body = {};
-    if (e.postData && e.postData.contents) {
-      body = JSON.parse(e.postData.contents);
-    } else if (e.parameter.data) {
-      body = JSON.parse(decodeURIComponent(e.parameter.data));
+  // Volta para o romaneio com campo de anotação adicional
+  mostrarTela('tela-romaneio');
+
+  // Adiciona seção de entrega complementar se não existir
+  const jaExiste = document.getElementById('entrega-complementar');
+  if (!jaExiste) {
+    const card = document.createElement('div');
+    card.id = 'entrega-complementar';
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-head">
+        <div class="card-icon" style="background:var(--amc)">📝</div>
+        <div><div class="card-title">Entrega Complementar</div><div class="card-sub">Registre a entrega dos itens que faltaram</div></div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Itens entregues agora</label>
+          <textarea id="comp-itens" rows="3" style="width:100%;border:2px solid var(--bd);border-radius:8px;padding:10px;font-family:Barlow,sans-serif;font-size:0.85rem;resize:none" placeholder="Ex: DESINFETANTE 5L — 2 unidades entregues"></textarea>
+        </div>
+        <div class="field">
+          <label>Nome do recebedor desta entrega</label>
+          <input type="text" id="comp-recebedor" style="width:100%;padding:10px;border:2px solid var(--bd);border-radius:8px;font-family:Barlow,sans-serif;font-size:0.85rem" placeholder="Quem recebeu os itens complementares" />
+        </div>
+        <div style="font-size:0.78rem;color:var(--lv);margin-top:8px">A assinatura abaixo confirma o recebimento dos itens complementares.</div>
+      </div>`;
+    // Insert before the finalizar button
+    const btnFinalizar = document.getElementById('btn-finalizar');
+    btnFinalizar.parentElement.insertBefore(card, btnFinalizar);
+  }
+
+  setTimeout(() => { temAssinatura = false; initCanvas(); }, 100);
+  toast('Preencha os itens e colete nova assinatura', '');
+}
+
+// ── INIT ────────────────────────────────────────────────
+const pedidosSalvos = localStorage.getItem('eg_pedidos_status');
+const statusPedidos = pedidosSalvos ? JSON.parse(pedidosSalvos) : {};
+
+function init() {
+  // Hora atual
+  const agora = new Date();
+  document.getElementById('hora-entrega').value =
+    String(agora.getHours()).padStart(2,'0') + ':' + String(agora.getMinutes()).padStart(2,'0');
+
+  renderListaPedidos(pedidos);
+  initCanvas();
+}
+
+// ── LISTA DE PEDIDOS ─────────────────────────────────────
+function renderListaPedidos(lista) {
+  const cont = document.getElementById('lista-pedidos');
+  const total = lista.length;
+  const entregues = lista.filter(p => statusPedidos[p.num] === 'entregue').length;
+  document.getElementById('sub-pedidos').textContent =
+    modoDia
+      ? `${pedidosDoDia.size} selecionado(s) de ${total} pedidos`
+      : `${total} pedidos · ${entregues} entregues · ${total - entregues} pendentes`;
+
+  if (lista.length === 0) {
+    cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--lv)">Nenhum pedido encontrado</div>';
+    return;
+  }
+
+  cont.innerHTML = lista.map(p => {
+    const entregue = statusPedidos[p.num] === 'entregue';
+    const noDia = pedidosDoDia.has(p.num);
+
+    if (modoDia) {
+      return `<div class="pedido-item ${noDia ? 'no-dia' : ''}" onclick="selecionarPedido('${p.num}')">
+        <div class="pedido-row">
+          <div style="flex:1">
+            <div class="pedido-num">Pedido #${p.num} · ${p.data}</div>
+            <div class="pedido-loja">${p.loja}</div>
+            <div class="pedido-end">${p.cidade}-${p.uf} · ${p.itens.length} item(s)</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${entregue ? '<span class="badge-status badge-ok" style="font-size:0.65rem">✅</span>' : ''}
+            <div class="check-dia ${noDia ? 'marcado' : ''}" onclick="togglePedidoDia('${p.num}', event)" title="Marcar/desmarcar do dia">${noDia ? '✓' : '+'}</div>
+          </div>
+        </div>
+      </div>`;
     }
 
-    switch(action) {
-      case 'salvarPedidos':     return jsonResponse(salvarPedidos(body.pedidos));
-      case 'carregarPedidos':   return jsonResponse(carregarPedidos());
-      case 'atualizarStatus':   return jsonResponse(atualizarStatus(body.num, body.loja, body.status));
-      case 'salvarHistorico':   return jsonResponse(salvarHistorico(body));
-      case 'enviarEmail':       return jsonResponse(enviarEmail(body));
-      case 'ping':              return jsonResponse({ok:true, msg:'Apps Script EG Entregas OK'});
-      default:                  return jsonResponse({ok:false, erro:'Ação inválida: '+action});
-    }
-  } catch(err) {
-    return jsonResponse({ok:false, erro: err.message});
-  }
+    return `<div class="pedido-item ${entregue ? 'selecionado' : ''}" onclick="selecionarPedido('${p.num}')">
+      <div class="pedido-row">
+        <div>
+          <div class="pedido-num">Pedido #${p.num} · ${p.data}</div>
+          <div class="pedido-loja">${p.loja}</div>
+          <div class="pedido-end">${p.endereco}, ${p.numero} · ${p.cidade}-${p.uf}</div>
+          <div style="margin-top:4px;font-size:0.72rem;color:var(--lv)">${p.itens.length} item(s)</div>
+        </div>
+        <div style="text-align:right">
+          <div class="badge-status ${entregue ? 'badge-ok' : 'badge-pend'}" style="margin-top:4px">
+            ${entregue ? '✅ Entregue' : '⏳ Pendente'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-// ── PEDIDOS ──────────────────────────────────────────────────
-function salvarPedidos(pedidos) {
-  if (!pedidos || !pedidos.length) return {ok:false, erro:'Lista vazia'};
-  const sh = getSheet(SHEET_PEDIDOS, COLS_PED);
-  if (sh.getLastRow() > 1)
-    sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn()).clearContent();
-  const agora = new Date().toLocaleString('pt-BR');
-  const rows = pedidos.map(p => [
-    p.num, p.data, p.comprador||'', p.loja, p.endereco||'',
-    p.numero||'', p.complemento||'', p.cidade||'', p.uf||'',
-    p.cep||'', p.bairro||'', p.obs||'', p.total||'0',
-    JSON.stringify(p.itens||[]), p.status||'pendente', agora
-  ]);
-  sh.getRange(2,1,rows.length,COLS_PED.length).setValues(rows);
-  return {ok:true, salvos:rows.length};
+function filtrarPedidos(q) {
+  const termo = q.toLowerCase();
+  const filtrados = pedidos.filter(p =>
+    p.loja.toLowerCase().includes(termo) ||
+    p.num.includes(termo) ||
+    p.cidade.toLowerCase().includes(termo)
+  );
+  renderListaPedidos(filtrados);
 }
 
-function carregarPedidos() {
-  const sh = getSheet(SHEET_PEDIDOS, COLS_PED);
-  const last = sh.getLastRow();
-  if (last < 2) return {ok:true, pedidos:[]};
-  const data = sh.getRange(2,1,last-1,COLS_PED.length).getValues();
-  const pedidos = data.filter(r=>r[0]).map(r=>({
-    num:String(r[0]), data:String(r[1]), comprador:String(r[2]),
-    loja:String(r[3]), endereco:String(r[4]), numero:String(r[5]),
-    complemento:String(r[6]), cidade:String(r[7]), uf:String(r[8]),
-    cep:String(r[9]), bairro:String(r[10]), obs:String(r[11]),
-    total:String(r[12]), itens:JSON.parse(r[13]||'[]'), status:String(r[14])
-  }));
-  return {ok:true, pedidos};
+// ── SELECIONAR PEDIDO ────────────────────────────────────
+function selecionarPedido(num) {
+  pedidoAtual = pedidos.find(p => p.num === num);
+  if (!pedidoAtual) return;
+  preencherRomaneio(pedidoAtual);
+  mostrarTela('tela-romaneio');
+
+  // Mostra e-mails fixos da Cirvaiha só se for pedido dela
+  const blocoCirc = document.getElementById('bloco-emails-cirvaiha');
+  const blocoTermo = document.getElementById('bloco-termo-cirvaiha');
+  const ehCirv = (pedidoAtual.comprador || '').toUpperCase().includes('CIRVAIHA');
+  if (blocoCirc)  blocoCirc.style.display  = ehCirv ? '' : 'none';
+  if (blocoTermo) blocoTermo.style.display = ehCirv ? '' : 'none';
+
+  // Carrega e-mail salvo para esta loja
+  const emailsLojas = JSON.parse(localStorage.getItem('eg_emails_lojas') || '{}');
+  const emailSalvo = emailsLojas[pedidoAtual.loja] || '';
+  const campoEmail = document.getElementById('email-cliente-extra');
+  const hintEmail  = document.getElementById('hint-email-salvo');
+  if (campoEmail) campoEmail.value = emailSalvo;
+  if (hintEmail)  hintEmail.textContent = emailSalvo ? '✅ E-mail memorizado para esta loja' : '';
+
+  // Inicializa canvas DEPOIS de mostrar a tela (para ter tamanho correto)
+  setTimeout(function() {
+    temAssinatura = false;
+    initCanvas();
+    const status = document.getElementById('assin-status');
+    if (status) { status.textContent = 'Aguardando assinatura...'; status.style.color = 'var(--lv)'; }
+  }, 100);
 }
 
-function atualizarStatus(num, loja, status) {
-  const sh = getSheet(SHEET_PEDIDOS, COLS_PED);
-  const last = sh.getLastRow();
-  if (last < 2) return {ok:false};
-  const data = sh.getRange(2,1,last-1,4).getValues();
-  for (let i=0; i<data.length; i++) {
-    if (String(data[i][0])===String(num) && String(data[i][3])===String(loja)) {
-      sh.getRange(i+2,15).setValue(status);
-      sh.getRange(i+2,16).setValue(new Date().toLocaleString('pt-BR'));
-      return {ok:true};
-    }
-  }
-  return {ok:false, erro:'Não encontrado'};
+function preencherRomaneio(p) {
+  document.getElementById('rom-num').textContent = p.num;
+  document.getElementById('rom-data').textContent = p.data;
+  document.getElementById('rom-loja').textContent = p.loja;
+
+  const endParts = [p.endereco, p.numero, p.complemento, p.bairro, p.cidade + '-' + p.uf, 'CEP: ' + p.cep];
+  document.getElementById('rom-end').textContent = endParts.filter(Boolean).join(' · ');
+
+  const tbody = document.getElementById('rom-itens');
+  tbody.innerHTML = p.itens.map((item, i) => `
+    <tr id="item-row-${i}">
+      <td class="num">${i+1}</td>
+      <td>${item.produto}</td>
+      <td class="num">${item.sku}</td>
+      <td class="num">${item.un}</td>
+      <td class="qtd">${parseFloat(item.qtd).toFixed(0)}</td>
+      <td style="text-align:center">
+        <div style="display:flex;gap:4px;justify-content:center">
+          <button type="button" onclick="setItemStatus(${i},'ok',this)" 
+            style="width:28px;height:28px;border-radius:6px;border:2px solid #27AE60;background:white;color:#27AE60;font-size:13px;cursor:pointer;font-weight:700" 
+            title="Entregue">✓</button>
+          <button type="button" onclick="setItemStatus(${i},'falta',this)"
+            style="width:28px;height:28px;border-radius:6px;border:2px solid #C0392B;background:white;color:#C0392B;font-size:13px;cursor:pointer;font-weight:700"
+            title="Faltou">✗</button>
+        </div>
+      </td>
+    </tr>`).join('');
+  // Inicializa status dos itens
+  itemStatus = {};
+
+  const totalQtd = p.itens.reduce((s,i)=>s+parseFloat(i.qtd||0),0);
+  document.getElementById('rom-qtd-itens').textContent =
+    'Nº de itens: ' + p.itens.length + ' · Soma das Qtdes: ' + totalQtd.toFixed(0);
+
+  const obs = document.getElementById('rom-obs');
+  obs.textContent = p.obs ? 'Obs: ' + p.obs : '';
+  obs.style.display = p.obs ? '' : 'none';
 }
 
-// ── HISTÓRICO ────────────────────────────────────────────────
-function salvarHistorico(reg) {
-  if (!reg || !reg.num) return {ok:false, erro:'Registro inválido'};
-  const sh = getSheet(SHEET_HIST, COLS_HIST);
-  const agora = new Date().toLocaleString('pt-BR');
-  sh.appendRow([
-    reg.id||Date.now(), reg.timestamp||Date.now(), reg.dataEntrega||'',
-    reg.num, reg.loja, reg.cidade||'', reg.uf||'',
-    reg.entregador||'', reg.recebedor||'', reg.cargo||'',
-    reg.hora||'', reg.obs||'', reg.total||'',
-    reg.qtdItens||0, reg.faltas||0, agora
-  ]);
-  limparHistoricoAntigo(sh);
-  return {ok:true};
+// ── CANVAS ASSINATURA ────────────────────────────────────
+let canvasIniciado = false;
+
+function initCanvas() {
+  const canvas = document.getElementById('canvas-assin');
+  if (!canvas) return;
+
+  // Garante tamanho correto mesmo se estava oculto
+  const largura = canvas.parentElement.offsetWidth - 32 || 300;
+  canvas.style.width = largura + 'px';
+  canvas.style.height = '160px';
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = largura * dpr;
+  canvas.height = 160 * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#1B3A5C';
+  ctx.lineWidth   = 2.5;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+
+  let desenhando = false;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    return {
+      x: (touch.clientX - rect.left),
+      y: (touch.clientY - rect.top)
+    };
+  }
+
+  function start(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    desenhando = true;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function draw(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!desenhando) return;
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    temAssinatura = true;
+    canvas.classList.add('assinado');
+    document.getElementById('assin-status').textContent = '✅ Assinatura capturada';
+    document.getElementById('assin-status').style.color = 'var(--vd)';
+  }
+
+  function end(e) {
+    e.preventDefault();
+    desenhando = false;
+    ctx.beginPath();
+  }
+
+  // Remove listeners antigos antes de adicionar novos
+  canvas.replaceWith(canvas.cloneNode(true));
+  const novoCanvas = document.getElementById('canvas-assin');
+  const novoCtx = novoCanvas.getContext('2d');
+  novoCtx.scale(dpr, dpr);
+  novoCtx.strokeStyle = '#1B3A5C';
+  novoCtx.lineWidth   = 2.5;
+  novoCtx.lineCap     = 'round';
+  novoCtx.lineJoin    = 'round';
+
+  function startN(e) {
+    e.preventDefault();
+    desenhando = true;
+    const rect = novoCanvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    novoCtx.beginPath();
+    novoCtx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+  }
+  function drawN(e) {
+    e.preventDefault();
+    if (!desenhando) return;
+    const rect = novoCanvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    novoCtx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    novoCtx.stroke();
+    novoCtx.beginPath();
+    novoCtx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    temAssinatura = true;
+    novoCanvas.classList.add('assinado');
+    document.getElementById('assin-status').textContent = '✅ Assinatura capturada';
+    document.getElementById('assin-status').style.color = 'var(--vd)';
+  }
+  function endN(e) { e.preventDefault(); desenhando = false; novoCtx.beginPath(); }
+
+  novoCanvas.addEventListener('mousedown',  startN);
+  novoCanvas.addEventListener('mousemove',  drawN);
+  novoCanvas.addEventListener('mouseup',    endN);
+  novoCanvas.addEventListener('mouseleave', endN);
+  novoCanvas.addEventListener('touchstart', startN, { passive: false });
+  novoCanvas.addEventListener('touchmove',  drawN,  { passive: false });
+  novoCanvas.addEventListener('touchend',   endN,   { passive: false });
 }
 
-function limparHistoricoAntigo(sh) {
-  const limite = Date.now() - 90*24*60*60*1000;
-  for (let i=sh.getLastRow(); i>=2; i--) {
-    const ts = sh.getRange(i,2).getValue();
-    if (ts && Number(ts) < limite) sh.deleteRow(i);
-  }
+function limparAssinatura() {
+  const canvas = document.getElementById('canvas-assin');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  canvas.classList.remove('assinado');
+  temAssinatura = false;
+  const status = document.getElementById('assin-status');
+  if (status) { status.textContent = 'Aguardando assinatura...'; status.style.color = 'var(--lv)'; }
 }
 
-// ── E-MAIL COM COMPROVANTE ANEXO ─────────────────────────────
-// E-mails fixos da Cirvaiha
-const EMAILS_CIRVAIHA = [
-  'suprimentos1cirvaiha@gmail.com',
-  'faturamentocirvaiha@gmail.com',
-  'barbara@cirvaiha.com'
-];
-const EMAIL_EG = 'eg.romaneios@gmail.com';
-const PALAVRA_CIRVAIHA = 'CIRVAIHA';
+// ── FINALIZAR ENTREGA ────────────────────────────────────
+async function finalizarEntrega() {
+  const recebedor  = document.getElementById('recebedor').value.trim();
+  const entregador = document.getElementById('entregador').value;
+  const emailEG    = document.getElementById('email-eg').value.trim();
 
-function enviarEmail(body) {
-  const { loja, comprador, num, htmlComp, emailClienteExtra } = body;
-
-  if (!htmlComp) return {ok:false, erro:'Sem comprovante HTML'};
-
-  // Define destinatários: fixos da Cirvaiha só se for pedido Cirvaiha
-  let destinatarios = [];
-  const eCircvaiha = (comprador||'').toUpperCase().includes(PALAVRA_CIRVAIHA) ||
-                     (loja||'').toUpperCase().includes(PALAVRA_CIRVAIHA);
-  if (eCircvaiha) {
-    destinatarios = [...EMAILS_CIRVAIHA];
+  if (!recebedor) { toast('⚠️ Informe o nome de quem recebeu', 'vm'); return; }
+  if (!entregador) { toast('⚠️ Selecione o entregador', 'vm'); return; }
+  // Assinatura OU foto física são aceitas
+  if (!temAssinatura && !fotoRomaneiofisicoBase64) {
+    toast('⚠️ Colete a assinatura digital ou anexe foto do romaneio assinado', 'vm'); return;
   }
-  // E-mail extra do cliente (outros clientes)
-  if (emailClienteExtra && emailClienteExtra.trim()) {
-    destinatarios.push(emailClienteExtra.trim());
+  if (!emailEG) { toast('⚠️ Informe o e-mail de destino', 'vm'); return; }
+  const faltas = coletarFaltas();
+
+  // Salva e-mail adicional do cliente por loja
+  const emailExtra = document.getElementById('email-cliente-extra').value.trim();
+  if (emailExtra && pedidoAtual) {
+    const emailsLojas = JSON.parse(localStorage.getItem('eg_emails_lojas') || '{}');
+    emailsLojas[pedidoAtual.loja] = emailExtra;
+    localStorage.setItem('eg_emails_lojas', JSON.stringify(emailsLojas));
   }
 
-  if (!destinatarios.length) {
-    // Sem destinatário configurado — envia só para EG como cópia
-    destinatarios = [EMAIL_EG];
+  const btn = document.getElementById('btn-finalizar');
+  btn.textContent = '⏳ Gerando comprovante...';
+  btn.disabled = true;
+
+  // Captura assinatura em base64
+  const canvas = document.getElementById('canvas-assin');
+  const assinaturaBase64 = canvas.toDataURL('image/png');
+
+  const cargo      = document.getElementById('cargo').value;
+  const hora       = document.getElementById('hora-entrega').value;
+  const obsEntrega = document.getElementById('obs-entrega').value;
+
+  // Monta lista de destinatários
+  const emailsFixosCirv = ['suprimentos1cirvaiha@gmail.com','faturamentocirvaiha@gmail.com','barbara@cirvaiha.com'];
+  const emailExtra2 = document.getElementById('email-cliente-extra').value.trim();
+  const todosDestinatarios = [...emailsFixosCirv];
+  if (emailExtra2) todosDestinatarios.push(emailExtra2);
+
+  // Monta HTML do comprovante
+  const compElem = document.getElementById('comp-itens');
+  const compRec  = document.getElementById('comp-recebedor');
+  const entregaComp = compElem ? compElem.value : '';
+  const recebedorComp = compRec ? compRec.value : '';
+  const htmlComp = gerarHTMLComprovante(pedidoAtual, recebedor, cargo, entregador, hora, obsEntrega, assinaturaBase64, faltas, fotoRomaneiofisicoBase64, entregaComp, recebedorComp);
+
+  // Salva status localmente
+  statusPedidos[pedidoAtual.num] = 'entregue';
+  localStorage.setItem('eg_pedidos_status', JSON.stringify(statusPedidos));
+
+  // Salva no histórico local (com assinatura) por 90 dias
+  salvarNoHistorico(pedidoAtual, recebedor, cargo, entregador, hora, obsEntrega, assinaturaBase64, fotoRomaneiofisicoBase64, faltas, htmlComp);
+
+  // Salva status e histórico no Drive se configurado
+  if (getAsUrl()) {
+    salvarStatusNoDrive(pedidoAtual.num, pedidoAtual.loja, 'entregue');
+    salvarHistoricoNoDrive({
+      id: Date.now(), timestamp: Date.now(),
+      dataEntrega: new Date().toLocaleDateString('pt-BR'),
+      num: pedidoAtual.num, loja: pedidoAtual.loja,
+      cidade: pedidoAtual.cidade, uf: pedidoAtual.uf,
+      entregador, recebedor, cargo, hora,
+      obs: obsEntrega, total: pedidoAtual.total,
+      qtdItens: pedidoAtual.itens.length,
+      faltas: faltas ? faltas.length : 0
+    });
   }
 
-  const assunto = `Comprovante de Entrega — Pedido #${num} | ${loja} | EG Soluções`;
+  // Tenta enviar via Apps Script
+  const appsScriptUrl = localStorage.getItem('eg_apps_script_url') || '';
 
-  const corpo = `Prezados,\n\nSegue em anexo o comprovante de entrega referente ao Pedido #${num} — ${loja}.\n\nO documento contém a relação dos produtos entregues, dados do recebedor e assinatura de confirmação.\n\nAtenciosamente,\nNancy Guedes\nEG Soluções Integradas\n(11) 96686-6729\neg.romaneios@gmail.com`;
-
-  // HTML como anexo
-  const blob = Utilities.newBlob(htmlComp, 'text/html', `Romaneio_${num}_${loja.replace(/\s+/g,'_')}.html`);
-
-  // Envia para cada destinatário + CC para EG
-  destinatarios.forEach(dest => {
+  if (appsScriptUrl) {
     try {
-      GmailApp.sendEmail(dest, assunto, corpo, {
-        cc: EMAIL_EG,
-        attachments: [blob],
-        name: 'EG Soluções Integradas'
+      await fetch(appsScriptUrl + '?action=romaneio', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'romaneio',
+          emailEG, destinatarios: todosDestinatarios,
+          pedidoNum: pedidoAtual.num,
+          loja: pedidoAtual.loja,
+          recebedor, cargo, entregador, hora, obsEntrega,
+          htmlComprovante: htmlComp
+        })
+      });
+    } catch(e) {}
+  }
+
+  // Download local do comprovante
+  const nomeArquivo = `Romaneio_${pedidoAtual.num}_${pedidoAtual.loja.replace(/\s+/g,'_')}.html`;
+  const blob = new Blob([htmlComp], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  // Salva para compartilhamento
+  window._ultimoComprovante = { html: htmlComp, htmlComp, nome: nomeArquivo, loja: pedidoAtual.loja, num: pedidoAtual.num, comprador: pedidoAtual.comprador || '', destinatarios: todosDestinatarios, emailEG };
+
+  // Mostra sucesso
+  document.getElementById('msg-sucesso').textContent =
+    `Comprovante gerado! Pedido #${pedidoAtual.num} — ${pedidoAtual.loja}`;
+  document.getElementById('resumo-entrega').innerHTML = `
+    <strong>Pedido:</strong> #${pedidoAtual.num}<br>
+    <strong>Loja:</strong> ${pedidoAtual.loja}<br>
+    <strong>Entregador:</strong> ${entregador}<br>
+    <strong>Recebedor:</strong> ${recebedor}${cargo ? ' (' + cargo + ')' : ''}<br>
+    <strong>Horário:</strong> ${hora}<br>
+
+    <strong>Itens:</strong> ${pedidoAtual.itens.length} produtos<br>
+    <span style="color:var(--vd)">✅ Comprovante baixado no celular</span>`;
+
+  mostrarTela('tela-sucesso');
+
+  // Se estiver no modo dia, mostra próxima loja pendente
+  const btnProxima = document.getElementById('btn-proxima-entrega');
+  const hintProxima = document.getElementById('hint-proxima-loja');
+  if (modoDia && pedidosDoDia.size > 0) {
+    const pendentes = [...pedidosDoDia]
+      .map(num => pedidos.find(p => p.num === num))
+      .filter(p => p && statusPedidos[p.num] !== 'entregue');
+    if (pendentes.length > 0) {
+      const prox = pendentes[0];
+      if (btnProxima) btnProxima.textContent = `📦 Ir para ${prox.loja}`;
+      if (hintProxima) { hintProxima.textContent = `${pendentes.length} loja(s) pendente(s) no dia`; hintProxima.style.display = ''; }
+    } else {
+      if (btnProxima) btnProxima.textContent = '🎉 Ver lista do dia';
+      if (hintProxima) { hintProxima.textContent = 'Todas as lojas do dia foram entregues!'; hintProxima.style.display = ''; }
+    }
+  } else {
+    if (btnProxima) btnProxima.textContent = '📦 Próxima Entrega';
+    if (hintProxima) hintProxima.style.display = 'none';
+  }
+}
+
+// ── GERA HTML DO COMPROVANTE ─────────────────────────────
+function gerarHTMLComprovante(p, recebedor, cargo, entregador, hora, obs, assinaturaBase64, faltas, fotoFisica, entregaComp, recebedorComp) {
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const itensRows = p.itens.map((item, i) => `
+    <tr>
+      <td style="padding:6px 8px;text-align:center;color:#666;font-size:12px">${i+1}</td>
+      <td style="padding:6px 8px;font-size:13px">${item.produto}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:12px">${item.sku}</td>
+      <td style="padding:6px 8px;text-align:center;font-size:12px">${item.un}</td>
+      <td style="padding:6px 8px;text-align:center;font-weight:700;color:#1B3A5C;font-size:13px">${parseFloat(item.qtd).toFixed(0)}</td>
+    </tr>`).join('');
+
+  const endFull = [p.endereco, p.numero, p.complemento, p.bairro, p.cidade + '-' + p.uf, 'CEP: ' + p.cep].filter(Boolean).join(', ');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+  body{font-family:Arial,sans-serif;margin:0;padding:20px;max-width:720px}
+  .header{border-bottom:3px solid #1B3A5C;padding-bottom:16px;margin-bottom:16px}
+  .logo{display:inline-block;background:#1B3A5C;padding:6px 12px;border-radius:6px;margin-bottom:10px}
+  .logo b{color:white;font-size:18px} .logo small{display:block;color:#E8903A;font-size:9px;letter-spacing:2px}
+  .titulo{font-size:18px;font-weight:700;margin-bottom:4px}
+  .num{font-size:22px;font-weight:900;color:#E8903A}
+  .info-box{background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:16px}
+  .info-box .loja{font-size:15px;font-weight:700;color:#1B3A5C}
+  .info-box .end{font-size:12px;color:#666;margin-top:2px}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px}
+  thead th{background:#1B3A5C;color:white;padding:8px;text-align:left;font-size:12px}
+  tbody tr:nth-child(even){background:#f9f9f9}
+  tbody td{border-bottom:1px solid #eee}
+  tfoot td{background:#fff8f0;padding:8px;font-weight:700}
+  .assin-section{border-top:2px dashed #ddd;padding-top:16px;margin-top:16px}
+  .assin-img{border:1px solid #ddd;border-radius:6px;max-width:300px;background:#fff}
+  .footer{margin-top:20px;padding-top:12px;border-top:1px solid #eee;font-size:11px;color:#999;text-align:center}
+</style></head><body>
+<div class="header">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div class="logo"><b>EG</b><small>SOLUÇÕES</small></div>
+      <div class="titulo">Relatório de Produção</div>
+      <div class="num">Nº ${p.num}</div>
+      <div style="font-size:11px;color:#666;margin-top:6px">47.849.037 EMERSON SILVA GUEDES<br>CNPJ: 47.849.037/0001-52 · IE: 127.751.801.111</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:#666">Data do pedido</div>
+      <div style="font-weight:700">${p.data}</div>
+      <div style="font-size:11px;color:#666;margin-top:8px">Data da entrega</div>
+      <div style="font-weight:700">${hoje}</div>
+      <div style="font-size:11px;color:#666;margin-top:8px">Horário</div>
+      <div style="font-weight:700">${hora}</div>
+    </div>
+  </div>
+</div>
+
+<div class="info-box">
+  <div style="font-size:11px;color:#666;margin-bottom:4px">Cliente</div>
+  <div class="loja">${p.loja}</div>
+  <div class="end">${endFull}</div>
+</div>
+
+<table>
+  <thead><tr>
+    <th style="width:30px">#</th>
+    <th>Descrição do Produto/Serviço</th>
+    <th style="width:50px">Código</th>
+    <th style="width:40px">Un</th>
+    <th style="width:50px">Qtd</th>
+            <th style="width:70px">Status</th>
+  </tr></thead>
+  <tbody>${itensRows}</tbody>
+  <tfoot><tr>
+    <td colspan="5" style="padding:8px;font-size:12px;color:#666;text-align:center">
+      Nº de itens: ${p.itens.length} &nbsp;·&nbsp; 
+      Soma das Qtdes: ${p.itens.reduce((s,i)=>s+parseFloat(i.qtd),0).toFixed(0)}
+    </td>
+  </tr></tfoot>
+</table>
+
+${p.obs ? `<div style="background:#f9f9f9;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:16px"><b>Observações:</b> ${p.obs}</div>` : ''}
+
+${faltas && faltas.length > 0 ? `
+<div style="margin-bottom:16px;border:2px solid #C0392B;border-radius:8px;overflow:hidden">
+  <div style="background:#C0392B;padding:8px 12px;color:white;font-weight:700;font-size:13px">⚠️ Itens com Pendência de Entrega</div>
+  ${faltas.map(f => `<div style="padding:8px 12px;border-bottom:1px solid #eee;font-size:13px">
+    <span style="color:#C0392B;font-weight:700">✗ ${f.produto}</span> — ${parseFloat(f.qtd).toFixed(0)} ${f.un}
+    ${f.obs ? `<br><span style="color:#666;font-size:12px">Motivo: ${f.obs}</span>` : ''}
+  </div>`).join('')}
+  <div style="padding:8px 12px;background:#FFFADF;font-size:12px;color:#7A5A00">
+    ⚠️ Os itens acima serão entregues em visita complementar. O recebedor confirma ciência da pendência com sua assinatura abaixo.
+  </div>
+</div>` : ''}
+
+${entregaComp ? `
+<div style="margin-bottom:16px;border:2px solid #27AE60;border-radius:8px;overflow:hidden">
+  <div style="background:#27AE60;padding:8px 12px;color:white;font-weight:700;font-size:13px">✅ Entrega Complementar</div>
+  <div style="padding:10px 12px;font-size:13px">${entregaComp}</div>
+  ${recebedorComp ? `<div style="padding:0 12px 10px;font-size:12px;color:#666">Recebido por: <strong>${recebedorComp}</strong></div>` : ''}
+</div>` : ''}
+
+<div class="assin-section">
+  ${(p.comprador||'').toUpperCase().includes('CIRVAIHA') ? `
+  <div style="background:#f0f7f4;border:1px solid #b7dfcc;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:#1a3a2a;line-height:1.7">
+    <div style="font-weight:800;text-align:center;letter-spacing:1.5px;font-size:12px;margin-bottom:8px;color:#1B3A5C">TERMO DE RECEBIMENTO</div>
+    <p style="margin:0">Declaro para os fins que se fizerem necessários que recebi os produtos abaixo relacionados de acordo com os padrões estabelecidos em negociação.</p>
+    <p style="margin:8px 0 0;font-weight:700">CIRVAIHA GESTÃO DE SERVIÇOS E DESENVOLVIMENTO DE PESSOAS LTDA — CNPJ 15.040.354/0001-37</p>
+    <p style="margin:4px 0 0">Neste ato devidamente representada na forma de seu estatuto social doravante denominada cliente.</p>
+  </div>` : ''}
+  <table style="width:100%;border:none">
+    <tr>
+      <td style="width:50%;padding-right:20px;vertical-align:top">
+        <div style="font-size:12px;color:#666;margin-bottom:6px">Entregador</div>
+        <div style="font-weight:700">${entregador}</div>
+        <div style="font-size:11px;color:#666">EG Soluções Integradas</div>
+      </td>
+      <td style="width:50%;vertical-align:top">
+        <div style="font-size:12px;color:#666;margin-bottom:6px">Recebido por</div>
+        <div style="font-weight:700">${recebedor}</div>
+        ${cargo ? `<div style="font-size:11px;color:#666">${cargo}</div>` : ''}
+        <div style="font-size:11px;color:#666">${p.loja}</div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding-top:16px">
+        <div style="font-size:12px;color:#666;margin-bottom:8px">
+          ${fotoFisica ? 'Romaneio Assinado (foto)' : 'Assinatura Digital do Recebedor'}
+        </div>
+        ${fotoFisica
+          ? `<img class="assin-img" src="${fotoFisica}" style="max-height:200px;width:auto" />`
+          : `<img class="assin-img" src="${assinaturaBase64}" style="max-height:120px" />`
+        }
+        ${obs ? `<div style="margin-top:10px;font-size:12px;color:#666"><b>Obs:</b> ${obs}</div>` : ''}
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div style="text-align:center;padding:20px;background:#f4f6fa;border-top:1px solid #ddd;margin-top:16px">
+  <button onclick="window.print()" style="background:#1B3A5C;color:white;border:none;padding:13px 32px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif">
+    🖨️ Salvar como PDF
+  </button>
+  <div style="font-size:11px;color:#999;margin-top:8px">Clique no botão → selecione "Salvar como PDF"</div>
+</div>
+<div class="footer">
+  EG Soluções Integradas · Comprovante gerado em ${hoje} · Pedido #${p.num}
+</div>
+<style>
+@media print {
+  button, .print-bar { display: none !important; }
+}
+</style>
+</body></html>`;
+}
+
+// ── IMPORTAR CSV ─────────────────────────────────────────
+function importarCSV(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const lines = e.target.result.split('\n');
+      const novos = {};
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(';').map(c => c.trim().replace(/^"|"$/g,''));
+        if (cols.length < 20) continue;
+        const num = cols[0];
+        if (!num) continue;
+
+        // Cirvaiha: usa "Nome Entrega" (col 24) como loja destino
+        // Outros clientes: "Nome Entrega" vazio → usa "Nome Comprador" (col 1)
+        const nomeEntrega   = cols[24] ? cols[24].trim() : '';
+        const nomeComprador = cols[1]  ? cols[1].trim()  : '';
+        const nomeLoja = nomeEntrega || nomeComprador;
+        if (!nomeLoja) continue;
+
+        // Endereço: preferência para endereço de entrega; fallback para endereço do comprador
+        const endereco  = (cols[25] || cols[4]  || '').trim();
+        const numero    = (cols[26] || cols[6]  || '').trim();
+        const compl     = (cols[27] || cols[7]  || '').trim();
+        const cidade    = (cols[28] || cols[9]  || '').trim();
+        const uf        = (cols[29] || cols[10] || '').trim();
+        const cep       = (cols[30] || cols[8]  || '').trim();
+        const bairro    = (cols[31] || cols[5]  || '').trim();
+
+        // Chave única: num + loja (Cirvaiha tem várias lojas no mesmo pedido)
+        const chave = num + '|' + nomeLoja;
+
+        if (!novos[chave]) {
+          novos[chave] = {
+            num, data: cols[2],
+            comprador: nomeComprador,
+            loja: nomeLoja,
+            endereco, numero, complemento: compl,
+            cidade, uf, cep, bairro,
+            obs: cols[35] || '', total: cols[20] || '0',
+            itens: []
+          };
+        }
+        if (cols[14]) {
+          novos[chave].itens.push({
+            produto: cols[14], sku: cols[15], un: cols[16],
+            qtd: cols[17], val_unit: cols[18], val_total: cols[19]
+          });
+        }
+      }
+      pedidos = Object.values(novos);
+      renderListaPedidos(pedidos);
+      toast(`✅ ${pedidos.length} pedido(s) importado(s)!`, 'vd');
+      // Salva no Drive se configurado
+      if (getAsUrl()) {
+        salvarPedidosNoDrive(pedidos).then(() => toast('☁️ Pedidos salvos no Drive!', 'vd'));
+      }
+    } catch(err) {
+      toast('❌ Erro ao ler CSV: ' + err.message, 'vm');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ── NAVEGAÇÃO ────────────────────────────────────────────
+function mostrarTela(id) {
+  document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+  document.getElementById(id).classList.add('ativa');
+  window.scrollTo(0, 0);
+}
+
+function voltarLista() {
+  mostrarTela('tela-pedidos');
+  setNavAtivo('nav-pedidos');
+  renderListaPedidos(pedidos);
+  if (modoDia) atualizarBarraDia();
+}
+
+// ── COMPARTILHAR ────────────────────────────────────────
+function compartilharWhatsApp() {
+  if (!window._ultimoComprovante) { toast('Nenhum comprovante disponível', 'vm'); return; }
+  const c = window._ultimoComprovante;
+  const texto = encodeURIComponent(
+    `✅ *Comprovante de Entrega EG Soluções*
+
+Pedido: #${c.num}
+Loja: ${c.loja}
+
+O arquivo do comprovante foi salvo nos Downloads do celular.
+Nome do arquivo: ${c.nome}`
+  );
+  window.open(`https://wa.me/?text=${texto}`, '_blank');
+}
+
+async function compartilharEmail() {
+  if (!window._ultimoComprovante) { toast('Nenhum comprovante disponível', 'vm'); return; }
+  const c = window._ultimoComprovante;
+
+  // Tenta enviar via Apps Script (com anexo de verdade)
+  if (getAsUrl() && c.htmlComp) {
+    toast('📤 Enviando e-mail com anexo...', '');
+    const emailExtra = document.getElementById('email-cliente-extra')?.value?.trim() || '';
+    const res = await enviarEmailViaDrive(
+      { num: c.num, loja: c.loja, comprador: c.comprador || '' },
+      c.htmlComp, emailExtra
+    );
+    if (res && res.ok) {
+      toast('✅ E-mail enviado para ' + res.enviados + ' destinatário(s)!', 'vd');
+      return;
+    }
+    toast('⚠️ Falha no envio via Drive. Abrindo e-mail manual...', 'vm');
+  }
+
+  // Fallback: abre cliente de e-mail
+  const comprador = (c.comprador || '').toUpperCase();
+  const ehCirvaiha = comprador.includes('CIRVAIHA') || (c.loja||'').toUpperCase().includes('CIRVAIHA');
+  const destFixos = ehCirvaiha
+    ? ['suprimentos1cirvaiha@gmail.com','faturamentocirvaiha@gmail.com','barbara@cirvaiha.com']
+    : [];
+  const emailExtra = document.getElementById('email-cliente-extra')?.value?.trim() || '';
+  if (emailExtra) destFixos.push(emailExtra);
+  if (!destFixos.length) destFixos.push('eg.romaneios@gmail.com');
+  const assunto = encodeURIComponent('Comprovante de Entrega — Pedido #' + c.num + ' | ' + c.loja + ' | EG Soluções');
+  const corpo = encodeURIComponent('Prezados,\n\nSegue comprovante de entrega Pedido #' + c.num + ' — ' + c.loja + '.\n\nAtenciosamente,\nNancy Guedes — EG Soluções\n(11) 96686-6729');
+  const cc = encodeURIComponent('eg.romaneios@gmail.com');
+  window.open('mailto:' + destFixos.join(',') + '?cc=' + cc + '&subject=' + assunto + '&body=' + corpo, '_blank');
+}
+
+async function abrirCompartilhar() {
+  if (!window._ultimoComprovante) return;
+  const c = window._ultimoComprovante;
+  if (navigator.share) {
+    try {
+      const blob = new Blob([c.html], { type: 'text/html' });
+      const file = new File([blob], c.nome, { type: 'text/html' });
+      await navigator.share({
+        title: `Comprovante EG — Pedido #${c.num}`,
+        text: `Comprovante de entrega — ${c.loja}`,
+        files: [file]
       });
     } catch(e) {
-      Logger.log('Erro ao enviar para ' + dest + ': ' + e.message);
+      toast('Use os botões WhatsApp ou E-mail', '');
     }
+  } else {
+    toast('Use os botões WhatsApp ou E-mail', '');
+  }
+}
+
+function novaEntrega() {
+  mostrarTela('tela-pedidos');
+  setNavAtivo('nav-pedidos');
+  renderListaPedidos(pedidos);
+  const btn = document.getElementById('btn-finalizar');
+  btn.textContent = '✅ Finalizar e Enviar Comprovante';
+  btn.disabled = false;
+  fotoRomaneiofisicoBase64 = null;
+  itemStatus = {};
+  const compCard = document.getElementById('entrega-complementar');
+  if (compCard) compCard.remove();
+  const prevFis = document.getElementById('preview-rom-fisico');
+  if (prevFis) prevFis.innerHTML = '';
+  const fotoFisInput = document.getElementById('foto-romaneio-fisico');
+  if (fotoFisInput) fotoFisInput.value = '';
+  // Mantém modo dia e seleção se estiver ativo
+  if (modoDia) {
+    atualizarBarraDia();
+    toast('✅ Entregue! Selecione a próxima loja.', 'vd');
+  }
+}
+
+function toast(msg, tipo = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (tipo ? ' ' + tipo : '') + ' show';
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── MODO "DIA DE ENTREGA" ────────────────────────────────
+let modoDia = false;
+let pedidosDoDia = new Set(); // guarda nums dos pedidos selecionados
+
+function toggleModoDia() {
+  modoDia = !modoDia;
+  if (!modoDia) {
+    pedidosDoDia.clear();
+    document.getElementById('barra-dia').classList.remove('visivel');
+  }
+  const btn = document.getElementById('btn-modo-dia');
+  btn.style.background = modoDia ? 'var(--vd)' : 'var(--azc)';
+  btn.style.color = modoDia ? 'white' : 'var(--az)';
+  btn.textContent = modoDia ? '✕ Cancelar seleção' : '☑️ Montar dia';
+  renderListaPedidos(pedidos);
+  if (modoDia) toast('Toque nas lojas para montar o dia', '');
+}
+
+function togglePedidoDia(num, e) {
+  e.stopPropagation();
+  if (pedidosDoDia.has(num)) pedidosDoDia.delete(num);
+  else pedidosDoDia.add(num);
+  atualizarBarraDia();
+  renderListaPedidos(pedidos);
+}
+
+function atualizarBarraDia() {
+  const n = pedidosDoDia.size;
+  const barra = document.getElementById('barra-dia');
+  if (n === 0) { barra.classList.remove('visivel'); return; }
+  barra.classList.add('visivel');
+  document.getElementById('barra-dia-info').textContent = `${n} loja${n > 1 ? 's' : ''} selecionada${n > 1 ? 's' : ''}`;
+  // Conta produtos únicos
+  const prods = consolidarProdutos();
+  document.getElementById('barra-dia-sub').textContent = `${prods.length} produto(s) · toque "Ver lista" para detalhes`;
+}
+
+function consolidarProdutos() {
+  const mapa = {};
+  pedidosDoDia.forEach(num => {
+    const p = pedidos.find(x => x.num === num);
+    if (!p) return;
+    p.itens.forEach(item => {
+      const chave = item.produto.trim().toUpperCase();
+      if (!mapa[chave]) mapa[chave] = { produto: item.produto, un: item.un, qtd: 0 };
+      mapa[chave].qtd += parseFloat(item.qtd) || 0;
+    });
+  });
+  return Object.values(mapa).sort((a, b) => a.produto.localeCompare(b.produto));
+}
+
+function abrirConsolidado() {
+  if (pedidosDoDia.size === 0) { toast('Selecione ao menos uma loja', 'vm'); return; }
+  const prods = consolidarProdutos();
+  const lojas = [...pedidosDoDia].map(num => pedidos.find(p => p.num === num)).filter(Boolean);
+
+  document.getElementById('cons-titulo').textContent = `${lojas.length} loja${lojas.length > 1 ? 's' : ''} · ${prods.length} produto${prods.length > 1 ? 's' : ''}`;
+
+  const listaLojas = lojas.map(p => `<div style="font-size:0.8rem;padding:4px 0;border-bottom:1px solid var(--ci)">${p.loja} <span style="color:var(--lv)">— #${p.num}</span></div>`).join('');
+
+  const listaProd = prods.map(pr => `
+    <div class="cons-prod-row">
+      <div style="flex:1;padding-right:10px">
+        <div style="font-weight:600;color:var(--tx)">${pr.produto}</div>
+        <div style="font-size:0.72rem;color:var(--lv)">${pr.un}</div>
+      </div>
+      <div class="cons-qtd-badge">${Number.isInteger(pr.qtd) ? pr.qtd : pr.qtd.toFixed(0)} ${pr.un}</div>
+    </div>`).join('');
+
+  document.getElementById('cons-corpo').innerHTML = `
+    <div class="cons-section">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--lv);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Lojas do dia</div>
+      ${listaLojas}
+    </div>
+    <div class="cons-section">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--lv);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">📦 Separação total</div>
+      ${listaProd}
+    </div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-vd" onclick="compartilharListaDia()">📤 Compartilhar lista</button>
+      <button class="btn" style="background:var(--az);color:white" onclick="abrirRota();fecharConsolidado()">🗺️ Ver rota do dia</button>
+      <button class="btn btn-out" onclick="fecharConsolidado()">Fechar</button>
+    </div>
+  `;
+  document.getElementById('cons-modal').classList.add('aberto');
+}
+
+function fecharConsolidado() {
+  document.getElementById('cons-modal').classList.remove('aberto');
+}
+
+function compartilharListaDia() {
+  const prods = consolidarProdutos();
+  const lojas = [...pedidosDoDia].map(num => pedidos.find(p => p.num === num)).filter(Boolean);
+  const linhas = prods.map(p => `• ${p.produto} → *${Number.isInteger(p.qtd)?p.qtd:p.qtd.toFixed(0)} ${p.un}*`).join('\n');
+  const texto = `📦 *Separação EG — ${new Date().toLocaleDateString('pt-BR')}*\n\n*Lojas:* ${lojas.map(l=>l.loja).join(', ')}\n\n${linhas}`;
+  if (navigator.share) {
+    navigator.share({ title: 'Separação do dia', text: texto }).catch(() => {});
+  } else {
+    const enc = encodeURIComponent(texto);
+    window.open(`https://wa.me/?text=${enc}`, '_blank');
+  }
+}
+
+// ── ROTEIRIZAÇÃO ─────────────────────────────────────────
+function abrirRota() {
+  if (pedidosDoDia.size === 0) { toast('Selecione ao menos uma loja', 'vm'); return; }
+
+  const lojas = [...pedidosDoDia]
+    .map(num => pedidos.find(p => p.num === num))
+    .filter(Boolean);
+
+  // Agrupa por cidade/região para ordenar
+  const ordemRegiao = ['São Paulo','Guarulhos','Campinas','Itupeva','Itaquaquecetuba','São Roque','São Bernardo do Campo','Atibaia'];
+  lojas.sort((a, b) => {
+    const ia = ordemRegiao.indexOf(a.cidade);
+    const ib = ordemRegiao.indexOf(b.cidade);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
-  return {ok:true, enviados: destinatarios.length};
+  // Monta waypoints para Google Maps
+  // Formato: origin=endereço1&waypoints=end2|end3...&destination=endN
+  const enderecos = lojas.map(p => {
+    const end = [p.endereco, p.numero, p.cidade, 'SP', 'Brasil'].filter(Boolean).join(', ');
+    return encodeURIComponent(end);
+  });
+
+  let url;
+  if (enderecos.length === 1) {
+    url = `https://www.google.com/maps/dir/?api=1&destination=${enderecos[0]}&travelmode=driving`;
+  } else {
+    const origin = enderecos[0];
+    const destination = enderecos[enderecos.length - 1];
+    const waypoints = enderecos.slice(1, -1).join('%7C'); // | codificado
+    url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? '&waypoints=' + waypoints : ''}&travelmode=driving`;
+  }
+
+  // Mostra resumo da rota antes de abrir
+  const resumo = lojas.map((p, i) => `${i+1}. ${p.loja} — ${p.cidade}`).join('\n');
+  const confirma = `Rota para ${lojas.length} loja(s):\n\n${resumo}\n\nAbrir no Google Maps?`;
+  if (confirm(confirma)) window.open(url, '_blank');
 }
+
+// ── HISTÓRICO DE COMPROVANTES (90 dias) ─────────────────
+const HIST_KEY = 'eg_historico_comprovantes';
+const HIST_DIAS = 90;
+
+function limparHistoricoAntigo() {
+  const dados = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const limite = Date.now() - HIST_DIAS * 24 * 60 * 60 * 1000;
+  const filtrado = dados.filter(r => r.timestamp >= limite);
+  localStorage.setItem(HIST_KEY, JSON.stringify(filtrado));
+  return filtrado;
+}
+
+function salvarNoHistorico(pedido, recebedor, cargo, entregador, hora, obs, assinaturaBase64, fotoFisica, faltas, htmlComp) {
+  const dados = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const registro = {
+    id: Date.now(),
+    timestamp: Date.now(),
+    dataEntrega: new Date().toLocaleDateString('pt-BR'),
+    num: pedido.num,
+    loja: pedido.loja,
+    cidade: pedido.cidade,
+    uf: pedido.uf,
+    entregador,
+    recebedor,
+    cargo,
+    hora,
+    obs,
+    total: pedido.total,
+    qtdItens: pedido.itens.length,
+    faltas: faltas ? faltas.length : 0,
+    assinaturaBase64: fotoFisica ? null : assinaturaBase64,
+    fotoFisica: fotoFisica || null,
+    htmlComp
+  };
+  // Substitui se mesmo pedido já existir
+  const idx = dados.findIndex(r => r.num === pedido.num);
+  if (idx >= 0) dados.splice(idx, 1, registro);
+  else dados.unshift(registro);
+  localStorage.setItem(HIST_KEY, JSON.stringify(dados));
+}
+
+function abrirHistorico() {
+  mostrarTela('tela-historico');
+  const dados = limparHistoricoAntigo();
+  renderHistorico(dados);
+}
+
+function renderHistorico(lista) {
+  const cont = document.getElementById('lista-historico');
+  document.getElementById('hist-sub').textContent =
+    lista.length > 0 ? `${lista.length} comprovante(s) salvos · últimos 90 dias` : 'Nenhum comprovante salvo ainda';
+
+  if (lista.length === 0) {
+    cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--lv)">Nenhuma entrega finalizada ainda.<br><br>Após finalizar uma entrega, o comprovante aparece aqui por 3 meses.</div>';
+    return;
+  }
+
+  cont.innerHTML = lista.map(r => {
+    const assinImg = r.assinaturaBase64
+      ? `<img class="hist-assin-preview" src="${r.assinaturaBase64}" />`
+      : r.fotoFisica
+        ? `<img class="hist-assin-preview" src="${r.fotoFisica}" />`
+        : '';
+    return `<div class="hist-item" onclick="abrirDetalheHist(${r.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="hist-meta">Pedido #${r.num} · ${r.dataEntrega}</div>
+          <div class="hist-loja">${r.loja}</div>
+          <div class="hist-meta">${r.cidade}-${r.uf} · ${r.qtdItens} item(s) · R$ ${r.total}</div>
+          <div class="hist-meta" style="margin-top:3px">Entregador: ${r.entregador} · Recebeu: ${r.recebedor}</div>
+        </div>
+        <div style="text-align:right">
+          <span class="badge-status badge-ok">✅ Salvo</span>
+          ${r.faltas > 0 ? `<div style="margin-top:4px"><span class="badge-status" style="background:var(--vmc);color:var(--vm)">⚠️ ${r.faltas} falta(s)</span></div>` : ''}
+        </div>
+      </div>
+      ${assinImg}
+    </div>`;
+  }).join('');
+}
+
+function filtrarHistorico(q) {
+  const dados = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const t = q.toLowerCase();
+  renderHistorico(dados.filter(r =>
+    r.loja.toLowerCase().includes(t) || r.num.includes(t) || r.cidade.toLowerCase().includes(t)
+  ));
+}
+
+function abrirDetalheHist(id) {
+  const dados = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const r = dados.find(x => x.id === id);
+  if (!r) return;
+
+  document.getElementById('hist-modal-titulo').textContent = `#${r.num} — ${r.loja}`;
+
+  const assinHtml = r.assinaturaBase64
+    ? `<img class="hist-assin-full" src="${r.assinaturaBase64}" style="max-height:130px;object-fit:contain" />`
+    : r.fotoFisica
+      ? `<img class="hist-assin-full" src="${r.fotoFisica}" style="max-height:180px;object-fit:contain" />`
+      : '<div style="color:var(--lv);font-size:0.8rem">Sem imagem de assinatura</div>';
+
+  document.getElementById('hist-modal-corpo').innerHTML = `
+    <div style="background:var(--ci);border-radius:10px;padding:12px;margin-bottom:12px;font-size:0.82rem;line-height:2">
+      <div><b>Data:</b> ${r.dataEntrega} · ${r.hora}</div>
+      <div><b>Entregador:</b> ${r.entregador}</div>
+      <div><b>Recebedor:</b> ${r.recebedor}${r.cargo ? ' (' + r.cargo + ')' : ''}</div>
+      <div><b>Loja:</b> ${r.loja} · ${r.cidade}-${r.uf}</div>
+      <div><b>Itens:</b> ${r.qtdItens} produto(s) · Total: R$ ${r.total}</div>
+      ${r.faltas > 0 ? `<div style="color:var(--vm)"><b>Faltas:</b> ${r.faltas} item(s)</div>` : ''}
+      ${r.obs ? `<div><b>Obs:</b> ${r.obs}</div>` : ''}
+    </div>
+    <div style="font-size:0.75rem;font-weight:700;color:var(--lv);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
+      ${r.fotoFisica ? '📸 Foto do Romaneio Físico' : '✍️ Assinatura Digital'}
+    </div>
+    ${assinHtml}
+    <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-vd" onclick="baixarComprovante(${r.id})">⬇️ Baixar Comprovante HTML</button>
+      <button class="btn btn-out" onclick="fecharModalHist()">Fechar</button>
+    </div>
+  `;
+  document.getElementById('hist-modal').classList.add('aberto');
+}
+
+function fecharModalHist() {
+  document.getElementById('hist-modal').classList.remove('aberto');
+}
+
+function baixarComprovante(id) {
+  const dados = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const r = dados.find(x => x.id === id);
+  if (!r || !r.htmlComp) { toast('Comprovante não disponível', 'vm'); return; }
+  const nomeArquivo = `Romaneio_${r.num}_${r.loja.replace(/\s+/g,'_')}.html`;
+  const blob = new Blob([r.htmlComp], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = nomeArquivo; a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Comprovante baixado!', 'vd');
+}
+
+function setNavAtivo(id) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('ativo'));
+  document.getElementById(id)?.classList.add('ativo');
+}
+
+// ── APPS SCRIPT / DRIVE ──────────────────────────────────────
+const AS_KEY = 'eg_apps_script_url_limpeza';
+const AS_URL_FIXO = 'https://script.google.com/macros/s/AKfycbzDYZMMHAtAPLDd-VscwjcIbDxKHwyBwuCwNVie8A0xLSPIuHF6eA7jRd8eGxQ1Ubl1/exec';
+
+function getAsUrl() {
+  return localStorage.getItem(AS_KEY) || AS_URL_FIXO;
+}
+
+// ── COMUNICAÇÃO COM APPS SCRIPT ──────────────────────────────
+// Apps Script não suporta CORS em POST direto do browser.
+// Solução: envia os dados como parâmetro GET (data=JSON).
+// Para payloads grandes (htmlComp), divide em chamadas menores.
+
+async function chamarAS(action, body = {}) {
+  const url = getAsUrl();
+  if (!url) return null;
+  try {
+    const data = encodeURIComponent(JSON.stringify(body));
+    const resp = await fetch(`${url}?action=${action}&data=${data}`);
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch(e) {
+    console.warn('AS error:', e.message);
+    return null;
+  }
+}
+
+async function salvarPedidosNoDrive(lista) {
+  return chamarAS('salvarPedidos', { pedidos: lista });
+}
+
+async function carregarPedidosDoDrive() {
+  const res = await chamarAS('carregarPedidos', {});
+  if (res && res.ok && res.pedidos && res.pedidos.length > 0) return res.pedidos;
+  return null;
+}
+
+async function salvarStatusNoDrive(num, loja, status) {
+  return chamarAS('atualizarStatus', { num, loja, status });
+}
+
+async function salvarHistoricoNoDrive(reg) {
+  const r = Object.assign({}, reg);
+  delete r.assinaturaBase64;
+  delete r.fotoFisica;
+  delete r.htmlComp;
+  return chamarAS('salvarHistorico', r);
+}
+
+async function enviarEmailViaDrive(pedido, htmlComp, emailClienteExtra) {
+  // Envia o comprovante como anexo via Apps Script (que tem acesso ao Gmail)
+  return chamarAS('enviarEmail', {
+    num: pedido.num,
+    loja: pedido.loja,
+    comprador: pedido.comprador || '',
+    emailClienteExtra: emailClienteExtra || '',
+    htmlComp
+  });
+}
+
+// ── CONFIGURAÇÃO DO APPS SCRIPT ──────────────────────────────
+function abrirConfigAS() {
+  const atual = getAsUrl();
+  const novo = prompt('Cole o link do Apps Script (URL publicada):\n\nEx: https://script.google.com/macros/s/...exec', atual);
+  if (novo && novo.trim().startsWith('https://')) {
+    localStorage.setItem(AS_KEY, novo.trim());
+    toast('✅ Apps Script configurado! Verificando conexão...', 'vd');
+    // Testa a conexão
+    chamarAS('ping', {}).then(res => {
+      if (res && res.ok) {
+        toast('☁️ Conectado! Carregando pedidos...', 'vd');
+        iniciarApp();
+      } else {
+        toast('⚠️ Link configurado mas sem resposta. Verifique a publicação.', 'vm');
+      }
+    });
+  }
+}
+
+// ── START ────────────────────────────────────────────────────
+async function iniciarApp() {
+  // Tenta carregar pedidos do Drive primeiro
+  const urlAS = getAsUrl();
+  if (urlAS) {
+    document.getElementById('sub-pedidos').textContent = '🔄 Carregando do Drive...';
+    const pedidosDrive = await carregarPedidosDoDrive();
+    if (pedidosDrive) {
+      pedidos = pedidosDrive;
+      // Restaura status do localStorage
+      const st = JSON.parse(localStorage.getItem('eg_pedidos_status') || '{}');
+      pedidos.forEach(p => { if (p.status === 'entregue') st[p.num + '|' + p.loja] = 'entregue'; });
+      statusPedidos = st;
+      renderListaPedidos(pedidos);
+      toast(`✅ ${pedidos.length} pedido(s) carregado(s) do Drive`, 'vd');
+      return;
+    }
+  }
+  // Fallback: pedidos do código / localStorage
+  renderListaPedidos(pedidos);
+
+  // Mostra botão de configuração se ainda não configurou
+  if (!urlAS) {
+    setTimeout(() => {
+      toast('⚙️ Configure o Apps Script para salvar no Drive', '');
+    }, 1500);
+  }
+}
+
+iniciarApp();
+const pedidosSalvos2 = localStorage.getItem('eg_pedidos_status');
+// hora atual
+const agora2 = new Date();
+const yyyy2 = agora2.getFullYear();
+const mm2   = String(agora2.getMonth()+1).padStart(2,'0');
+const dd2   = String(agora2.getDate()).padStart(2,'0');
+document.getElementById('hora-entrega').value = `${yyyy2}-${mm2}-${dd2}`;
+</script>
+</body>
+</html>
